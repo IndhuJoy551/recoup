@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from sqlalchemy.orm import Session
 
-from app import ledger
+from app import ledger, webhooks
 from app.config import get_settings
 from app.db import get_session, init_db
 
@@ -37,6 +37,8 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+app.include_router(webhooks.router)
 
 
 @app.get("/health")

@@ -110,3 +110,106 @@ The stray customer and order are still in the test account. I am leaving them th
 quietly cleaning up, because "what does your system do with the debris from a half-finished
 recovery attempt?" is a question worth having an answer to, and pretending it never happened is
 not one.
+
+---
+
+## 2026-08-24 — The test card the whole internet recommends is an international card
+
+**Symptom:** First real payment attempt on our own seed link, `plink_TTaYEsKRzybzIO`, ₹1,200.
+Card `4111 1111 1111 1111`, the canonical test Visa. Razorpay's checkout refused it:
+*"payment could not be completed, international cards are not supported."*
+
+**Why:** I read the failure properly instead of guessing, because by then the webhook receiver
+existed and had already captured the event. Razorpay's own words, off the wire:
+
+```
+error_reason        international_transaction_not_allowed
+error_source        business
+error_description   ...this business accepts domestic (Indian) card payments only.
+international       true
+```
+
+`4111 1111 1111 1111` is not an Indian BIN. A fresh Razorpay test account has international
+payments disabled, so the card is rejected before it ever reaches a bank. Nothing was
+misconfigured. The account behaved exactly as an Indian merchant account should, and I had
+handed it a foreign card.
+
+Note `error_source: business`. Razorpay is saying the failure is on the *merchant's* side of
+the transaction, not the customer's.
+
+**Fix:** Stopped using cards for the happy path. Test mode UPI (`success@razorpay`) and the
+simulated netbanking page are domestic by construction and can't hit this. Cards stay in the
+cohort as a *failure* generator, which turns out to be what we actually needed them for.
+
+**What it taught me:** Two things, and the second one changed the design.
+
+First, the boring one: documentation examples are not account-valid. This is the second time in
+one day — `+919999999999` came from Razorpay's docs too. Their docs show the shape of a value.
+Whether *your* account accepts it is a different question, and only your account can answer it.
+
+Second, the one that matters. I had been thinking of `error_source` as diagnostic noise. It
+isn't — it decides whether a case is recoverable at all. A `customer`-sourced failure
+(insufficient funds, wrong OTP) is worth chasing: the customer can fix it, and a well-timed
+retry is exactly the product. A `business`-sourced failure like this one cannot be fixed by
+contacting the customer. Retrying it will fail identically, forever, at ₹0.02 of AI spend per
+attempt, while sending a real person messages about a problem that is not theirs.
+
+So `error_source: business` becomes a hard stop in the Watcher, before the Thinker ever sees the
+case, and a Guard rule behind that in case the Thinker proposes contact anyway. And it gives the
+report card a row I would not otherwise have thought to measure: **cases correctly identified as
+unrecoverable**. Not chasing money you cannot get is a result, not an absence of one.
+
+The nice irony: this is the first at-risk case Recoup ever saw, it is real, and the correct
+action on it is to do nothing and say why.
+
+---
+
+## 2026-08-24 — A webhook filed under the wrong object's id, and it looked fine
+
+**Symptom:** Nothing failed. Six real webhooks arrived from Razorpay, all signature-verified,
+all processed, no errors anywhere. Only when I printed the table to admire it did one row read:
+
+```
+payment_link.paid      order_TTf4sNCvkTzFPS
+```
+
+A `payment_link` event filed under an `order` id.
+
+**Why:** A delivery can carry more than one entity. `payment_link.paid` arrives with all three
+objects involved, because all three changed:
+
+```
+payload.order         -> order_TTf4sNCvkTzFPS
+payload.payment       -> pay_TTgoSQWwQ21qY2
+payload.payment_link  -> plink_TTaYEsKRzybzIO
+```
+
+My extractor walked the dict and returned the first entity with an id. That is a coin flip
+dressed up as a rule. It happened to be right for `payment.captured` (one entity, no ambiguity),
+which is the event I built it against, and wrong for the two multi-entity events. Two of six.
+
+**Fix:** Razorpay already names the subject — it is the event name. `payment_link.paid` is about
+the `payment_link`. Split on the dot and ask for that key by name. Twelve tests now cover the
+receiver, including one that asserts the same body under three different event names files three
+different ids. Backfilled the two wrong rows from the stored payloads and recorded the correction
+in the ledger, since an audit trail that quietly improves itself is not an audit trail.
+
+The same bug was in the amount extractor, which mattered more: the order said ₹5,000 and the
+payment said ₹1,200. On a partly-paid link, reading the wrong entity overstates the recovered
+total — the single number this whole project is judged on.
+
+**What it taught me:** This is the first bug today that produced no error message. The other
+three announced themselves — a 400, a rejected card, a file in a commit. This one returned a
+valid id, of a real object, that genuinely was part of the event. Every automated check passed.
+
+I only caught it because I read output I had no reason to read. That is not a strategy.
+
+So the lesson is about the shape of the mistake rather than the mistake: I wrote code that
+*searched* for a plausible answer when the input already *stated* the answer. `for wrapper in
+entities.values(): return the first one with an id` is a guess. `entities[event.split(".")[0]]`
+is a lookup. Guessing is how you get an answer that is well-formed, confident, and about the
+wrong object — and money systems are full of well-formed wrong answers, because every id looks
+like every other id.
+
+Wherever the payload tells you what it is, use that. Never infer from position what is written
+down in the data.

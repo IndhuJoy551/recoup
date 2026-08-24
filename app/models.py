@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import Integer, String, Text
+from sqlalchemy import Boolean, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -85,3 +85,34 @@ class LedgerEntry(Base):
 
     prev_hash: Mapped[str] = mapped_column(String(64))
     entry_hash: Mapped[str] = mapped_column(String(64), unique=True)
+
+
+class WebhookEvent(Base):
+    """One delivery from Razorpay, written down before it is acted on.
+
+    Razorpay promises *at-least-once* delivery: if our reply is slow, lost, or
+    non-200, it sends the same event again. That is not a bug in their system,
+    it is the contract. So `event_id` carries a unique constraint, and the second
+    delivery fails to insert instead of creating a second recovery row. The
+    failed insert *is* the idempotency check. It is supposed to happen.
+    """
+
+    __tablename__ = "webhook_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Razorpay's own id for this delivery, from the X-Razorpay-Event-Id header.
+    event_id: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+
+    event: Mapped[str] = mapped_column(String(64), index=True)
+    entity_id: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
+    signature_valid: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # received | processed | failed
+    status: Mapped[str] = mapped_column(String(16), default="received", index=True)
+
+    received_at: Mapped[dt.datetime] = mapped_column(default=utcnow)
+    processed_at: Mapped[dt.datetime | None] = mapped_column(nullable=True)
+
+    payload_json: Mapped[str] = mapped_column(Text, default="{}")
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
