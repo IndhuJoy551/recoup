@@ -74,3 +74,39 @@ Worth noting for the video: this is exactly the class of mistake the ledger's ap
 is meant to survive. A leaked file can be untracked. A silently edited audit row could not be
 recovered at all, which is why that table is protected at the database level rather than by my
 good intentions.
+
+---
+
+## 2026-08-24 — Two entities created, third rejected, no way to undo the first two
+
+**Symptom:** The seed script creates a customer, then an order, then a payment link. The first
+two succeeded. The third failed with `BAD_REQUEST_ERROR: Recurring digits in customer contact are
+disallowed`. I was using `+919999999999`, which is the placeholder in Razorpay's own docs. It left
+me with `cust_TTaXtaDYSMprTD` and `order_TTaXtzf1uahFWU` in the account and nothing to attach them
+to.
+
+**Why:** Two separate things.
+
+1. `/customers` accepts a contact number with repeated digits. `/payment_links` rejects it as
+   likely fake. Same account, same key, same field, different validation. I had assumed a value
+   accepted by one endpoint would be accepted by the next.
+2. More importantly: I had written a three-step create as if it were one operation. There is no
+   transaction across three HTTP calls and no rollback. A failure at step three leaves steps one
+   and two committed on Razorpay's side, permanently.
+
+**Fix:** Immediate fix was `+919876543210`. The real fix is that the Doer, when it lands, will not
+be written this way. Each externally-visible create carries an idempotency key derived from the
+case and the action, and the result is written to our side before the next call is made. Re-running
+after a partial failure then resumes rather than duplicating — the customer and order from the
+failed run get reused instead of a second pair being created.
+
+**What it taught me:** I had been thinking about idempotency as protection against Razorpay calling
+*me* twice, which is the webhook case. This is the mirror image: protection against me calling
+*Razorpay* twice after failing halfway through. Both are the same underlying fact — a money action
+can be attempted more than once and must only take effect once — and I had only designed for one
+direction of it.
+
+The stray customer and order are still in the test account. I am leaving them there rather than
+quietly cleaning up, because "what does your system do with the debris from a half-finished
+recovery attempt?" is a question worth having an answer to, and pretending it never happened is
+not one.
