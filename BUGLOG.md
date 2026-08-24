@@ -44,3 +44,33 @@ instead of leaving it as decoration.
 Related: this is also why the run is reproducible. The evaluation replays from a fixed seed and
 caches model responses, so a rate limit halfway through a 300-case batch doesn't invalidate the
 numbers — it just resumes.
+
+---
+
+## 2026-08-24 — Committed the database to a public repo, ten minutes after writing the .gitignore
+
+**Symptom:** My first real commit included `data/recoup.db-shm` and `data/recoup.db-wal`. I had
+written `*.db` into `.gitignore` specifically to prevent this, and watched it happen anyway. The
+contents were harmless this time — one `server_started` ledger row, no keys — but the same commit
+on a later day would have published every case, customer reference and recovery amount in the
+database to a public GitHub repo.
+
+**Why:** I turned on SQLite's write-ahead logging (`PRAGMA journal_mode=WAL`) for better
+concurrent writes. WAL keeps pending data in two sidecar files next to the database —
+`recoup.db-wal` and `recoup.db-shm`. Those are database contents, but their filenames do not end
+in `.db`, so my pattern did not match them. I had ignored the thing I was thinking about rather
+than the category it belongs to.
+
+**Fix:** `*.db-wal`, `*.db-shm` and `*.db-journal` added to `.gitignore`, and the two files
+removed from tracking with `git rm --cached`.
+
+**What it taught me:** An ignore rule that names one filename is a guess; the rule I actually
+wanted was "no local data store, in any of the forms it takes". The broader point is that turning
+on a database feature quietly changed the project's on-disk shape, and I only found out because I
+read my own `git status` output instead of skimming it. I now check what a commit actually
+contains before pushing, rather than trusting that a rule written earlier still covers the case.
+
+Worth noting for the video: this is exactly the class of mistake the ledger's append-only design
+is meant to survive. A leaked file can be untracked. A silently edited audit row could not be
+recovered at all, which is why that table is protected at the database level rather than by my
+good intentions.

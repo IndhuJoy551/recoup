@@ -26,6 +26,9 @@ build/
 
 # --- Local data & artifacts ---
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 *.sqlite3
 data/local/
 out/
