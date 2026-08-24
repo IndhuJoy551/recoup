@@ -1,0 +1,1 @@
+# keeps the data directory in git; the .db file itself is gitignored
