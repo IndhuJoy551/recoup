@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import Boolean, Integer, String, Text
+from sqlalchemy import Boolean, Float, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -116,3 +116,48 @@ class WebhookEvent(Base):
 
     payload_json: Mapped[str] = mapped_column(Text, default="{}")
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class CaseTruth(Base):
+    """What actually would have happened. Recoup is never allowed to read this.
+
+    In production this table cannot exist: once you have contacted a customer,
+    you can never replay the month without contacting them, so "would they have
+    paid anyway?" is permanently unknowable. That counterfactual is exactly what
+    a false-positive rate is made of, and Razorpay asked for the false-positive
+    cost by name.
+
+    So we build a world where it is knowable and then withhold it. The separation
+    is a different table rather than a promise: `app/watcher.py`, the planner and
+    the guard import `Case` and never import this. The referee — the report card
+    and the outcome simulator — is the only reader.
+    """
+
+    __tablename__ = "case_truth"
+
+    case_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+
+    # A business-source decline is not fixable by talking to the customer. No
+    # amount of contact or retrying moves it. Chasing one is pure false positive.
+    recoverable: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # They would have paid on their own inside the window. Contacting them buys
+    # nothing and spends real goodwill, and it still shows up in "recovered" if
+    # you are not careful — which is how recovery tools flatter themselves.
+    would_pay_unprompted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Probability they pay if contacted well, at a sensible time, first attempt.
+    p_pay_if_contacted: Mapped[float] = mapped_column(Float, default=0.0)
+
+    # Probability a silent retry succeeds with no human contacted at all.
+    p_pay_if_retried: Mapped[float] = mapped_column(Float, default=0.0)
+
+    # Days to wait for the best shot. Salary-day timing lives here: an
+    # insufficient-funds decline on the 28th is a different case on the 1st.
+    best_wait_days: Mapped[int] = mapped_column(Integer, default=1)
+
+    # Chance an unwanted contact makes them opt out for good.
+    annoyance: Mapped[float] = mapped_column(Float, default=0.05)
+
+    # Plain-English reason this case is what it is, for debugging the report card.
+    note: Mapped[str] = mapped_column(Text, default="")
