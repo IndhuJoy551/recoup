@@ -100,8 +100,15 @@ Columns that matter, and why:
 ### The ablation
 
 `rules_only` and `recoup` see identical inputs and differ only in who plans. Whichever wins is
-published. The first run of the ablation went **against** the model by 27%, and the cause was an
-instruction of mine, not the model — see the BUGLOG entry below.
+published. The first run went **against** the model by 27%, and the cause was an instruction of
+mine — my system prompt said "propose the smallest plan", so it proposed one action for 259 of
+300 cases while the rules got a two- or three-step ladder.
+
+The report card **refuses to name a winner** when more than 5% of cases fell back to the rules,
+and says so instead. A fallback runs `plan_rules_only`, so a case that fell back is literally the
+rules-only policy wearing the agent's label; past a few percent the two columns being compared
+are partly the same code. To get a clean verdict, run `python -m scripts.warm_cache` until it
+reports the cache complete, then re-run the report card.
 
 ---
 
@@ -261,6 +268,20 @@ that changed the design:
 
 ---
 
+## The planner
+
+`openai/gpt-oss-120b` by default, reached through an OpenAI-compatible endpoint;
+`provider_for()` also dispatches Gemini model names to Google's API. Two providers because
+one of them ran out of free-tier quota partway through building this and throttled a 300-case
+batch to roughly a call a minute.
+
+Calls are paced client-side to the provider's token budget rather than discovering the limit by
+hitting it, and every answer is cached to `data/thinker_cache.json`, keyed by
+`(model, system prompt, case)` and committed — which is why a clone with no API key reproduces
+the numbers.
+
+Override with `--model`, or `RECOUP_MODEL`. `RECOUP_OFFLINE=1` forces cache-only.
+
 ## Layout
 
 ```
@@ -269,7 +290,8 @@ app/         actions guard watcher thinker doer simulator report runner
              static/dashboard.html
 scripts/     generate_cohort  run_baselines  run_report_card  warm_cache
              break_it  seed_razorpay  ping_razorpay  check_methods
-tests/       156 tests
+tests/       actions guard watcher simulator runner thinker dashboard
+             cohort ledger webhooks razorpay_client isolation
 results/     report_card.json  RESULTS.md
 data/        thinker_cache.json (committed)  recoup.db (not)
 ```

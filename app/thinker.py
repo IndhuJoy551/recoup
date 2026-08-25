@@ -125,7 +125,17 @@ MAX_WORKERS = 3
 # is for genuine failures rather than for arithmetic anyone could have done up
 # front. Raise the budget when the account does.
 TOKENS_PER_MINUTE = 8_000
-EST_TOKENS_PER_CALL = 1_300
+
+# `max_tokens` is a RESERVATION against the rate limit, not a cap on what you are
+# charged. A 429 spelled it out: "Requested 2348" for a call whose prompt is
+# ~1,150 tokens -- the other 1,200 were the output ceiling I had set, and the
+# plans actually come back at a median of 128 tokens. So two thirds of every
+# request's rate-limit cost bought tokens that were never generated. A three-step
+# plan with reasons has never exceeded ~350.
+MAX_OUTPUT_TOKENS = 600
+
+# Prompt + reservation, which is what the limiter actually counts.
+EST_TOKENS_PER_CALL = 1_750
 
 
 class Pacer:
@@ -380,7 +390,7 @@ def _call_groq(prompt: str, *, model: str, api_key: str, client: httpx.Client,
             ],
             "temperature": 0.0,
             "response_format": {"type": "json_object"},
-            "max_tokens": 1200,
+            "max_tokens": MAX_OUTPUT_TOKENS,
         },
         timeout=TIMEOUT_SECONDS,
     )
@@ -433,7 +443,7 @@ def _call_gemini(prompt: str, *, model: str, api_key: str, client: httpx.Client,
                 "temperature": 0.0,
                 "responseMimeType": "application/json",
                 "responseSchema": RESPONSE_SCHEMA,
-                "maxOutputTokens": 2048,
+                "maxOutputTokens": MAX_OUTPUT_TOKENS,
             },
         },
         timeout=TIMEOUT_SECONDS,

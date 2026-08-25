@@ -2339,6 +2339,11 @@
   "output_tokens": 137,
   "text": "{\n  \"plan\": [\n    {\n      \"action\": \"send_payment_link\",\n      \"wait_days\": 0,\n      \"hour_ist\": 10,\n      \"reason\": \"Since the customer abandoned the checkout with high intent and tomorrow is salary day, sending a payment link at a convenient morning hour gives them an easy one-tap way to complete the purchase now that funds are likely available.\"\n    }\n  ],\n  \"case_summary\": \"The customer abandoned checkout with high intent and no prior recovery contacts, making them an ideal candidate for a single timed payment link right around salary day.\"\n}"
  },
+ "b3a78b6562e9466bd4b844ca98b3318a": {
+  "input_tokens": 1148,
+  "output_tokens": 1200,
+  "text": "{\"plan\":[{\"action\":\"escalate_to_human\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Amount exceeds auto\u2011action ceiling; requires human approval before any customer\u2011facing step.\"},{\"action\":\"send_reminder\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"B2B invoice overdue; a gentle reminder is appropriate and respects the customer relationship.\"},{\"action\":\"schedule_retry\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"Salary will be credited tomorrow; a silent retry after funds are likely available maximizes chance of automatic capture without bothering the client.\"},{\"action\":\"send_payment_link\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If silent retry fails, a one\u2011tap payment link gives the customer an easy way to settle the invoice without further pressure.\"}]}"
+ },
  "b3f3d5395209ce98ecdb870890139535": {
   "input_tokens": 1154,
   "output_tokens": 136,

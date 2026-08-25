@@ -390,3 +390,46 @@ is struggling* and *you have used your quota for this minute* both look like a n
 opposite responses: back off gently versus wait for a specific clock. The provider was telling me
 which one it was, in a header I was not reading. **When an API gives you a number, the retry
 policy is not yours to invent.**
+
+## 2026-08-25 — `max_tokens` is a reservation, and I was burning two thirds of the budget on tokens nobody generated
+
+**Symptom:** Pre-planning the cohort stalled again, this time at 158 of 300. The provider's
+per-minute headers said the token bucket was **full** — `x-ratelimit-remaining-tokens: 7923` of
+8000 — while every call came back 429. Throttled and idle at the same time, for the second time
+in one evening.
+
+**Why:** The per-minute limit was not the one being hit. Reading the actual 429 body instead of
+the headers:
+
+```
+Rate limit reached ... on tokens per day (TPD): Limit 200000, Used 199347, Requested 2348
+```
+
+Two things in that line. There is a **daily** token budget as well as a per-minute one, and I
+had spent it. And `Requested 2348` for a call whose prompt is about 1,150 tokens — the missing
+1,200 were `max_tokens`, the output ceiling I had set.
+
+**`max_tokens` is a reservation against your rate limit, not a cap on what you are charged.**
+The plans actually come back at a median of 128 tokens and have never exceeded ~350. So roughly
+two thirds of every request's rate-limit cost was buying output that was never generated, and my
+daily budget of ~85 planning calls should have been ~140.
+
+**Fix:** `MAX_OUTPUT_TOKENS = 600` — comfortably above the largest real plan, less than half the
+old ceiling. `EST_TOKENS_PER_CALL` now reflects prompt *plus* reservation, because that is what
+the limiter counts, and the client-side pacer is derived from it.
+
+The second fix matters more. The report card now **refuses to print an ablation verdict** when
+more than 5% of cases fell back to the rules, and says why. A fallback runs `plan_rules_only`, so
+a case that fell back is literally the rules-only policy wearing the agent's label; at 47%
+fallbacks the two columns being compared are partly the same code. It would still have printed a
+confident winner.
+
+**What it taught me:** I read the headers because they were structured and ignored the body
+because it was prose — and the prose was the only place that named the limit I was actually
+hitting. Twice this evening I have had a rate limiter tell me precisely what was wrong in a field
+I was not reading.
+
+And the guard is the real lesson. I had already been burned once by an ablation quietly comparing
+the rules against themselves. Fixing that instance was not enough; the *class* of error needed a
+check that fires on its own. The version of this that depends on me remembering is the version
+that publishes the bad number at 2am on submission day.

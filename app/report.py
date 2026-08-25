@@ -92,6 +92,7 @@ def score(result: RunResult, world: Cohortwide) -> dict:
         "policy": result.policy,
         "blurb": result.blurb,
         "gated": result.gated,
+        "cases": len(outcomes),
 
         # --- what arrived -------------------------------------------------
         "collected_paise": collected,
@@ -136,6 +137,11 @@ def score(result: RunResult, world: Cohortwide) -> dict:
         "llm_fallbacks": result.llm_fallbacks,
         "unknown_actions": result.unknown_actions,
     }
+
+
+# Above this share of cases falling back to rules, the ablation is not reporting
+# on the model any more and no verdict is printed. See render_ablation.
+FALLBACK_TOLERANCE = 0.05
 
 
 def _ratio(part: int, whole: int) -> float:
@@ -301,6 +307,16 @@ def render_ablation(card: dict, *, agent: str = "recoup", rules: str = "rules_on
     a, r = rows[agent], rows[rules]
     lines = ["", "=" * 96, "ABLATION: does the model earn its place?", "=" * 96, ""]
 
+    # A fallback runs `plan_rules_only`, so a case that fell back is literally the
+    # rules-only policy wearing the agent's label. A handful is a degraded run and
+    # the verdict still means something. Past that, the two columns are partly the
+    # same code and the comparison is not a comparison. Refusing to print a verdict
+    # is the only honest option, and it has to be automatic -- the version of this
+    # that relies on remembering is the version that publishes the bad number at
+    # 2am on submission day.
+    total = a.get("cases") or (a["llm_calls"] + a["llm_cached"] + a["llm_fallbacks"])
+    contaminated = total and a["llm_fallbacks"] / total > FALLBACK_TOLERANCE
+
     def line(label: str, av, rv, fmt=str) -> None:
         lines.append(f"  {label:<34}{fmt(av):>16}{fmt(rv):>16}")
 
@@ -318,6 +334,22 @@ def render_ablation(card: dict, *, agent: str = "recoup", rules: str = "rules_on
     line("cost as % of money caused", a["cost_pct_of_caused"], r["cost_pct_of_caused"],
          lambda v: "n/a" if v is None else f"{v:.2f}%")
     lines.append("")
+
+    if contaminated:
+        share = a["llm_fallbacks"] / total * 100
+        lines.append(
+            f"  NO VERDICT. {a['llm_fallbacks']} of {total} cases ({share:.0f}%) fell back to "
+            "the rules because the"
+        )
+        lines.append("  planner was unreachable, so the 'AI on' column above is partly the "
+                     "'AI off' column")
+        lines.append("  with a different label. Publishing a winner from this would be "
+                     "publishing a number")
+        lines.append("  I know to be contaminated.")
+        lines.append("")
+        lines.append("  Fix: `python -m scripts.warm_cache` until it reports the cache complete, "
+                     "then re-run.")
+        return "\n".join(lines)
 
     delta = a["caused_paise"] - r["caused_paise"]
     pct = (delta / r["caused_paise"] * 100) if r["caused_paise"] else 0.0

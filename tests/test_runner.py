@@ -200,3 +200,45 @@ def test_running_the_whole_thing_twice_gives_identical_numbers(loaded, rows):
         [runner.run_policy(loaded, get(n), rows, audit=False) for n in names], rows
     )
     assert first == second
+
+
+# ------------------------------------------------------- the ablation guard
+
+
+def _card_with_fallbacks(fallbacks: int, cases: int = 300) -> dict:
+    base = {
+        "caused_paise": 100_000, "share_of_winnable": 0.4, "contacts": 100,
+        "contacts_per_1000_caused": 1.0, "opt_outs": 1, "false_interventions": 1,
+        "escalations": 1, "cost_pct_of_caused": 1.0, "llm_cost_paise": 0,
+        "llm_calls": 0, "llm_cached": cases - fallbacks, "llm_fallbacks": fallbacks,
+        "cases": cases,
+    }
+    return {
+        "cohort": {},
+        "policies": [
+            {**base, "policy": "recoup"},
+            {**base, "policy": "rules_only", "caused_paise": 120_000,
+             "llm_fallbacks": 0, "llm_cached": 0},
+        ],
+    }
+
+
+def test_a_contaminated_ablation_refuses_to_name_a_winner():
+    """A fallback runs the rules, so a case that fell back IS the rules-only
+    policy wearing the agent's label. Past a few percent the two columns are
+    partly the same code and the comparison is not a comparison."""
+    text = report.render_ablation(_card_with_fallbacks(fallbacks=140))
+    assert "NO VERDICT" in text
+    assert "VERDICT: the rules win" not in text
+    assert "warm_cache" in text, "it has to say how to fix it, not just refuse"
+
+
+def test_a_clean_ablation_does_name_a_winner():
+    text = report.render_ablation(_card_with_fallbacks(fallbacks=0))
+    assert "NO VERDICT" not in text
+    assert "VERDICT" in text
+
+
+def test_a_handful_of_fallbacks_is_a_degraded_run_not_a_broken_one():
+    text = report.render_ablation(_card_with_fallbacks(fallbacks=3))
+    assert "NO VERDICT" not in text

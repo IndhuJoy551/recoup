@@ -6,19 +6,19 @@ reproducible: same seed, same cohort fingerprint, same committed model cache.
 - cohort seed: `20260826`
 - cohort fingerprint: `0d07e645a56905b580667ed083ad6833d6e079ca0dec3806a39e7cc8706f17a0`
 - as-of: `2026-08-31T04:00:00+00:00`
-- planner: `gemini-3.5-flash-lite` (cache only)
-- audit ledger: 57 entries, chain intact
+- planner: `openai/gpt-oss-120b` (cache only)
+- audit ledger: 115 entries, chain intact
 
 ## The comparison
 
 | policy | caused | % of winnable | collected | messages | retries | escalated | opt-outs | false positives | violations |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `do_nothing` | **Rs 0** | 0.0% | Rs 138,491 | 0 | 0 | 0 | 0 | 0 | 0 |
-| `blast_everyone` | **Rs 206,278** | 51.2% | Rs 315,397 | 681 | 0 | 0 | 41 | 56 | 586 |
-| `blast_everyone_gated` | **Rs 74,926** | 18.6% | Rs 210,597 | 267 | 0 | 16 | 18 | 25 | 0 |
+| `blast_everyone` | **Rs 206,278** | 51.2% | Rs 325,122 | 688 | 0 | 0 | 35 | 56 | 586 |
+| `blast_everyone_gated` | **Rs 74,926** | 18.6% | Rs 211,705 | 268 | 0 | 16 | 14 | 25 | 0 |
 | `retry_everything` | **Rs 20,103** | 5.0% | Rs 158,594 | 0 | 853 | 0 | 0 | 0 | 180 |
-| `rules_only` | **Rs 204,026** | 50.6% | Rs 335,317 | 278 | 66 | 31 | 16 | 31 | 0 |
-| `recoup` | **Rs 149,572** | 37.1% | Rs 283,229 | 235 | 27 | 26 | 10 | 40 | 0 |
+| `rules_only` | **Rs 204,026** | 50.6% | Rs 332,080 | 279 | 66 | 31 | 15 | 31 | 0 |
+| `recoup` | **Rs 166,325** | 41.3% | Rs 298,313 | 306 | 87 | 26 | 12 | 35 | 0 |
 
 Cohort: 300 cases, Rs 548,910 at risk. Of that, Rs 402,954 is winnable, Rs 138,491 was arriving anyway, and Rs 7,465 cannot be recovered by anyone.
 
@@ -36,6 +36,33 @@ because a merchant blasting their customer list does not have a compliance layer
 with Recoup's Guard switched on, so the effect of *targeting* can be separated
 from the effect of *compliance*.
 
+## What the table says
+
+```
+
+================================================================================================
+WHAT THIS TABLE SAYS
+================================================================================================
+
+  Most money caused:  blast_everyone at Rs 206,278 (51.2% of winnable).
+                      It cost 35 customers lost permanently, 56 people chased who were already paying,
+                      and 586 broken compliance rules.
+
+  Fewest messages:    rules_only at 1.37 messages per Rs 1000 caused, 15 opt-outs,
+                      for Rs 204,026 (50.6% of winnable).
+
+  Bothered nobody:    retry_everything caused Rs 20,103 without contacting a single customer
+                      -- no messages, no opt-outs, no goodwill spent. It is ranked separately
+                      because messages-per-rupee is undefined at zero messages, not because
+                      it did badly.
+
+  The control:        doing nothing collects Rs 138,491 and causes nothing at all. Any tool
+                      measured on 'recovered' rather than 'caused' would report that as a win.
+
+  Nobody's to win:    Rs 7,465 across 6 merchant-side declines. The policies that
+                      leave those alone are correct, and it costs them rupees in this table.
+```
+
 ## Ablation
 
 ```
@@ -46,19 +73,19 @@ ABLATION: does the model earn its place?
 
                                       AI on (recoup)  AI off (rules)
   ------------------------------------------------------------------
-  money caused                            Rs 149,572      Rs 204,026
-  share of winnable money                      37.1%           50.6%
-  messages sent                                  235             278
-  messages per Rs 1000 caused                   1.57            1.36
-  customers lost to opt-out                       10              16
-  chased someone already paying                   40              31
+  money caused                            Rs 166,325      Rs 204,026
+  share of winnable money                      41.3%           50.6%
+  messages sent                                  306             279
+  messages per Rs 1000 caused                   1.84            1.37
+  customers lost to opt-out                       12              15
+  chased someone already paying                   35              31
   handed to a human                               26              31
-  cost as % of money caused                    2.22%           1.94%
+  cost as % of money caused                    2.03%           1.94%
 
-  model cost for the batch      Rs 0   (0 live calls, 300 from cache, 0 fell back to rules)
-  model cost as % of recovery   0.000%
+  NO VERDICT. 142 of 300 cases (47%) fell back to the rules because the
+  planner was unreachable, so the 'AI on' column above is partly the 'AI off' column
+  with a different label. Publishing a winner from this would be publishing a number
+  I know to be contaminated.
 
-  VERDICT: the rules win. The model caused Rs 54,454 LESS (-26.7%).
-           On this cohort the LLM is decoration, and the honest recommendation
-           is to ship the rules and keep the model for the cases they cannot express.
+  Fix: `python -m scripts.warm_cache` until it reports the cache complete, then re-run.
 ```
