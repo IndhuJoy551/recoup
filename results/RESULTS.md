@@ -7,7 +7,7 @@ reproducible: same seed, same cohort fingerprint, same committed model cache.
 - cohort fingerprint: `0d07e645a56905b580667ed083ad6833d6e079ca0dec3806a39e7cc8706f17a0`
 - as-of: `2026-08-31T04:00:00+00:00`
 - planner: `openai/gpt-oss-120b` (cache only)
-- audit ledger: 115 entries, chain intact
+- audit ledger: 1922 entries, chain intact
 
 ## The comparison
 
