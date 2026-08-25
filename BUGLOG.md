@@ -354,3 +354,39 @@ which meant they were testing the rule's logic and not its reachability. **A tes
 constructs the state directly can prove a rule works and still tell you nothing about whether
 anything can reach it.** For guardrails specifically, "does it fire on a real run?" is a
 different question from "does it fire when I make it fire", and only the first one matters.
+
+## 2026-08-25 — Exponential backoff against a rate limiter, which is the wrong shape entirely
+
+**Symptom:** Pre-planning the 300-case cohort crawled. Each round of the warm-up landed a
+handful of cases and then reported the rest as errors; an hour in, the cache had 658 of the 802
+entries it needed. Meanwhile the provider's own headers said
+`x-ratelimit-remaining-tokens: 7923` out of 8000 — the bucket was nearly **full**. I was being
+throttled and idle at the same time.
+
+**Why:** My retry ladder was the same exponential backoff I use for Razorpay: wait 0.75s, then
+1.5s, then 3s, then give up. That is exactly right for a server that is overloaded — you are
+giving it room to recover. It is exactly wrong for a **token bucket that refills on a fixed 60
+second cycle**, which does not care that you waited three seconds. All four attempts landed
+inside the same closed window, failed identically, and the case fell back to the rules for a
+question the model would have answered fine forty seconds later.
+
+So the fallback rate was high, the ablation was being computed against a planner that had been
+switched off for a third of its cases, and nothing anywhere said "rate limited" — it said
+"errors".
+
+**Fix:** `_rate_limit_wait()` reads `retry-after`, then `x-ratelimit-reset-tokens`, then
+`x-ratelimit-reset-requests`, and sleeps for what the server actually said, capped at 70 seconds
+so a `3h46m` reset does not park a worker until tomorrow. Exponential backoff stays as the
+fallback for when there is no header. Concurrency dropped from 6 to 3, because six workers
+against an 8,000-token-per-minute budget are five workers generating 429s.
+
+A regex parses the durations, which sounds like overkill until you notice the character-loop
+version read `577ms` as 577 **minutes** — a nine-hour sleep inside a worker thread. There is a
+test for that specific string.
+
+**What it taught me:** I had one retry helper in my head labelled "the right way to retry", and I
+applied it to a completely different failure mode without noticing they were different. *Server
+is struggling* and *you have used your quota for this minute* both look like a non-200 and need
+opposite responses: back off gently versus wait for a specific clock. The provider was telling me
+which one it was, in a header I was not reading. **When an API gives you a number, the retry
+policy is not yours to invent.**

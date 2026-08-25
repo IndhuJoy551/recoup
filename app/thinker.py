@@ -47,6 +47,7 @@ import hashlib
 import json
 import os
 import random
+import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -113,8 +114,8 @@ def rates_for(model: str) -> tuple[float, float]:
     return (usd_in / 1000 * RUPEES_PER_USD * 100,
             usd_out / 1000 * RUPEES_PER_USD * 100)
 
-TIMEOUT_SECONDS = 45.0
-MAX_WORKERS = 6
+TIMEOUT_SECONDS = 120.0
+MAX_WORKERS = 3
 
 
 SYSTEM_PROMPT = f"""\
@@ -285,7 +286,50 @@ class LLMUnavailable(RuntimeError):
 
 
 RETRY_STATUS = {429, 500, 502, 503, 504}
-MAX_ATTEMPTS = 4
+MAX_ATTEMPTS = 5
+MAX_RATE_LIMIT_WAIT = 70.0
+
+
+def _parse_duration(text: str) -> float | None:
+    """Turn "58.47s", "577ms", "1m12s" or "30" into seconds.
+
+    `ms` has to be matched before `m`, which is the whole reason this is a regex
+    and not a character loop: the loop version read "577ms" as 577 *minutes* and
+    would have slept for nine and a half hours inside a retry.
+    """
+    text = (text or "").strip().lower()
+    if not text:
+        return None
+    try:
+        return float(text)                      # a bare number of seconds
+    except ValueError:
+        pass
+
+    units = {"ms": 0.001, "s": 1.0, "m": 60.0, "h": 3600.0}
+    total = 0.0
+    found = False
+    for number, unit in re.findall(r"(\d+(?:\.\d+)?)\s*(ms|h|m|s)", text):
+        total += float(number) * units[unit]
+        found = True
+    return total if found else None
+
+
+def _rate_limit_wait(response: httpx.Response, attempt: int) -> float:
+    """How long to actually wait, preferring what the server told us.
+
+    Exponential backoff is the right answer for an overloaded server and the
+    wrong one for a rate limiter. A token bucket that refills once a minute does
+    not care that you waited 0.75s, then 1.5s, then 3s -- all three fail, the
+    call is abandoned, and the batch quietly falls back to rules for a case the
+    model would have answered fine ten seconds later. That is what happened here:
+    a 300-case warm-up crawled to a handful per round while the provider's own
+    headers were saying exactly how long to wait.
+    """
+    for header in ("retry-after", "x-ratelimit-reset-tokens", "x-ratelimit-reset-requests"):
+        seconds = _parse_duration(response.headers.get(header, ""))
+        if seconds is not None and 0 < seconds <= MAX_RATE_LIMIT_WAIT:
+            return seconds + 1.0                # a beat past the reset, not exactly on it
+    return min(MAX_RATE_LIMIT_WAIT, 0.75 * 2 ** (attempt - 1)) + random.random() * 0.25
 
 
 def _call_groq(prompt: str, *, model: str, api_key: str, client: httpx.Client,
@@ -308,7 +352,7 @@ def _call_groq(prompt: str, *, model: str, api_key: str, client: httpx.Client,
     )
 
     if response.status_code in RETRY_STATUS and attempt < MAX_ATTEMPTS:
-        time.sleep(min(8.0, 0.75 * 2 ** (attempt - 1)) + random.random() * 0.25)
+        time.sleep(_rate_limit_wait(response, attempt))
         return _call_groq(prompt, model=model, api_key=api_key,
                           client=client, attempt=attempt + 1)
 
@@ -361,7 +405,7 @@ def _call_gemini(prompt: str, *, model: str, api_key: str, client: httpx.Client,
         timeout=TIMEOUT_SECONDS,
     )
     if response.status_code in RETRY_STATUS and attempt < MAX_ATTEMPTS:
-        time.sleep(min(8.0, 0.75 * 2 ** (attempt - 1)) + random.random() * 0.25)
+        time.sleep(_rate_limit_wait(response, attempt))
         return _call_gemini(prompt, model=model, api_key=api_key,
                             client=client, attempt=attempt + 1)
 

@@ -227,3 +227,53 @@ def test_the_agent_is_a_gated_policy_like_any_other():
     assert policy.gated, "the model's proposals go through the same gate as everything else"
     assert policy.uses_llm
     assert policy.plan.__self__ is brain
+
+
+# -------------------------------------------------------------- rate limits
+
+
+@pytest.mark.parametrize("text, seconds", [
+    ("58.47s", 58.47),
+    ("577ms", 0.577),      # milliseconds, NOT 577 minutes
+    ("1m12s", 72.0),
+    ("2h3m50.4s", 7430.4),
+    ("30", 30.0),
+    ("", None),
+    ("nonsense", None),
+])
+def test_rate_limit_durations_are_parsed(text, seconds):
+    """The `ms` case is the one that matters and the one that was wrong.
+
+    A character-by-character parser read "577ms" as 577 minutes, which inside a
+    retry would have been a nine-hour sleep in a worker thread.
+    """
+    assert thinker._parse_duration(text) == seconds
+
+
+def test_a_rate_limited_call_waits_as_long_as_the_server_asked():
+    """Exponential backoff is right for an overloaded server and wrong for a
+    token bucket. A bucket that refills once a minute does not care that you
+    waited 0.75s, then 1.5s, then 3s -- all three fail and the case falls back to
+    rules for no reason. See BUGLOG."""
+
+    class Response:
+        headers = {"x-ratelimit-reset-tokens": "42s"}
+
+    waited = thinker._rate_limit_wait(Response(), attempt=1)
+    assert 42.0 < waited <= 44.0, "wait past the reset, not exactly on it"
+
+
+def test_an_absurd_reset_header_does_not_park_a_worker_for_hours():
+    class Response:
+        headers = {"x-ratelimit-reset-requests": "3h46m"}
+
+    assert thinker._rate_limit_wait(Response(), attempt=1) <= thinker.MAX_RATE_LIMIT_WAIT
+
+
+def test_without_a_header_it_falls_back_to_exponential_backoff():
+    class Response:
+        headers = {}
+
+    first = thinker._rate_limit_wait(Response(), attempt=1)
+    fourth = thinker._rate_limit_wait(Response(), attempt=4)
+    assert fourth > first

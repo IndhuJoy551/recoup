@@ -287,13 +287,17 @@ def simulate(
         fatigue *= FATIGUE
         hit = rng.random() < p
 
-        # Annoyance is rolled whether or not the message worked, because the
-        # message was still received. A policy does not get to send freely just
-        # because it happened to succeed.
+        # Rolled whether or not the message worked, so the random stream does not
+        # depend on the outcome -- but a customer who paid is not recorded as
+        # lost, because for this case it no longer matters.
+        #
+        # One roll, not two. An earlier version rolled a second time for
+        # self-payers on the grounds that being chased for money you already
+        # meant to pay is the most irritating version. That is true, and the
+        # cohort already prices it in: `_truth_for` adds 0.06 to `annoyance` for
+        # exactly this. Charging it twice in two files is how a model ends up
+        # with a penalty nobody can find the source of.
         annoyed = rng.random() < truth.annoyance
-        if truth.would_pay_unprompted:
-            annoyed = annoyed or rng.random() < truth.annoyance  # being chased for
-            # money you already intended to pay is the most irritating version
 
         if hit:
             outcome.paid = True
