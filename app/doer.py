@@ -213,8 +213,8 @@ class Doer:
                 )
                 return Execution(
                     action.kind, True, "live", reality,
-                    reference=call.body.get("id"),
-                    detail=call.body.get("short_url", ""),
+                    reference=call.data.get("id"),
+                    detail=call.data.get("short_url", ""),
                     attempts=call.attempts,
                 )
 
@@ -226,7 +226,7 @@ class Doer:
                 )
                 return Execution(
                     action.kind, True, "live", reality,
-                    reference=call.body.get("id"),
+                    reference=call.data.get("id"),
                     detail=("order created; the re-attempt on the saved instrument "
                             "is simulated -- this test account has no saved token"),
                     attempts=call.attempts,

@@ -33,6 +33,22 @@ def reply(payload: dict) -> str:
     return json.dumps(payload)
 
 
+def use_fake_model(monkeypatch, brain, fn) -> None:
+    """Replace whichever provider backs the current model, and both keys.
+
+    Patched provider-agnostically on purpose. An earlier version patched only
+    the Gemini call; when the default model moved to the other provider these
+    tests silently started making real network calls -- which is how a unit
+    suite goes from 11 seconds to 108 and nobody notices what it is doing.
+    """
+    monkeypatch.setattr(thinker, "_call_gemini", fn)
+    monkeypatch.setattr(thinker, "_call_groq", fn)
+    settings = thinker.get_settings()
+    monkeypatch.setattr(settings, "gemini_api_key", "test-key", raising=False)
+    monkeypatch.setattr(settings, "groq_api_key", "test-key", raising=False)
+    brain.offline = False
+
+
 # ------------------------------------------------------------------- cache
 
 
@@ -80,12 +96,7 @@ def test_offline_mode_never_opens_a_socket(brain, signal, monkeypatch):
 def test_bad_proposals_are_refused_and_the_case_falls_back_to_rules(
     brain, signal, monkeypatch, bad, why
 ):
-    monkeypatch.setattr(
-        thinker, "_call_gemini",
-        lambda *a, **k: thinker.Reply(text=reply(bad)),
-    )
-    brain.offline = False
-    monkeypatch.setattr(thinker.get_settings(), "gemini_api_key", "test-key", raising=False)
+    use_fake_model(monkeypatch, brain, lambda *a, **k: thinker.Reply(text=reply(bad)))
 
     plan = brain.plan(signal)
 
@@ -97,12 +108,8 @@ def test_bad_proposals_are_refused_and_the_case_falls_back_to_rules(
 
 
 def test_truncated_json_is_survived(brain, signal, monkeypatch):
-    monkeypatch.setattr(
-        thinker, "_call_gemini",
-        lambda *a, **k: thinker.Reply(text='{"plan": [{"action": "send_rem'),
-    )
-    brain.offline = False
-    monkeypatch.setattr(thinker.get_settings(), "gemini_api_key", "test-key", raising=False)
+    use_fake_model(monkeypatch, brain,
+                   lambda *a, **k: thinker.Reply(text='{"plan": [{"action": "send_rem'))
 
     assert brain.plan(signal)
     assert brain.fallbacks == 1
@@ -112,9 +119,7 @@ def test_a_network_failure_is_survived(brain, signal, monkeypatch):
     def boom(*args, **kwargs):
         raise httpx.ConnectError("no route to host")
 
-    monkeypatch.setattr(thinker, "_call_gemini", boom)
-    brain.offline = False
-    monkeypatch.setattr(thinker.get_settings(), "gemini_api_key", "test-key", raising=False)
+    use_fake_model(monkeypatch, brain, boom)
 
     assert brain.plan(signal)
     assert brain.fallbacks == 1
@@ -133,9 +138,7 @@ def test_a_good_proposal_is_accepted_and_cached(brain, signal, monkeypatch):
         calls["n"] += 1
         return thinker.Reply(text=reply(good), input_tokens=900, output_tokens=120)
 
-    monkeypatch.setattr(thinker, "_call_gemini", once)
-    brain.offline = False
-    monkeypatch.setattr(thinker.get_settings(), "gemini_api_key", "test-key", raising=False)
+    use_fake_model(monkeypatch, brain, once)
 
     first = brain.plan(signal)
     assert [a.kind for a in first] == ["schedule_retry"]
@@ -172,7 +175,8 @@ def test_reasoning_tokens_are_billed_as_output(monkeypatch):
             captured["called"] = True
             return FakeResponse()
 
-    got = thinker._call_gemini("p", model="m", api_key="k", client=FakeClient())
+    got = thinker._call_gemini("p", model="gemini-3.6-flash", api_key="k",
+                               client=FakeClient())
     assert got.output_tokens == 1000, "thinking tokens are output tokens"
     assert captured["called"]
 
@@ -189,9 +193,7 @@ def test_a_total_outage_raises_instead_of_quietly_becoming_the_rules(brain, monk
     def always_fail(*args, **kwargs):
         raise LLMUnavailable("HTTP 429")
 
-    monkeypatch.setattr(thinker, "_call_gemini", always_fail)
-    brain.offline = False
-    monkeypatch.setattr(thinker.get_settings(), "gemini_api_key", "test-key", raising=False)
+    use_fake_model(monkeypatch, brain, always_fail)
 
     with pytest.raises(LLMUnavailable, match="Refusing to publish"):
         brain.prewarm(signals, workers=2, progress=False)
@@ -211,9 +213,7 @@ def test_a_partial_outage_does_not_raise(brain, monkeypatch):
                                                    "wait_days": 0, "hour_ist": 10,
                                                    "reason": "x"}]}))
 
-    monkeypatch.setattr(thinker, "_call_gemini", flaky)
-    brain.offline = False
-    monkeypatch.setattr(thinker.get_settings(), "gemini_api_key", "test-key", raising=False)
+    use_fake_model(monkeypatch, brain, flaky)
 
     stats = brain.prewarm(signals, workers=1, progress=False)
     assert 0 < stats["errors"] < stats["requested"]
