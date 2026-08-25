@@ -213,3 +213,64 @@ like every other id.
 
 Wherever the payload tells you what it is, use that. Never infer from position what is written
 down in the data.
+
+## 2026-08-25 — "Idempotent" was doing the opposite of what I meant, and it looked like a win
+
+**Symptom:** First run of the report card. `retry_everything` recovered 5% of the winnable
+money and the Guard reported 530 `duplicate_action` blocks against it — more blocks than that
+policy had cases. `blast_everyone` had 285. Both baselines were being neutered by a rule that
+was supposed to be a safety net, not a strategy.
+
+**Why:** My idempotency key was `action.kind`. So the Guard read "retry on day 0", "retry on
+day 1" and "retry on day 3" as *the same instruction repeated*, and refused two thirds of every
+retry ladder. Idempotency is not "never do this kind of thing twice" — that is what the cooldown
+and the stopping rule are for. Idempotency is replay protection: the *same instruction* arriving
+twice must have the effect of arriving once. And an instruction to move money includes **when**.
+
+**Fix:** Key on `kind@wait_days:hour` (`guard._fingerprint`). The repetition rules — 24h cooldown,
+3 contacts per customer per week, 4 attempts then stop forever — do the job they were always
+supposed to do, and now actually get exercised instead of being shadowed.
+
+**What it taught me:** The bug was invisible because it made my numbers *better*. Recoup beat the
+baselines by a mile, and the reason was that I had accidentally handcuffed them. If I had not gone
+looking at the per-rule breakdown — which I only printed because the report card needed a
+compliance column — I would have shipped a comparison that was rigged in my favour and never known
+it. Baselines need to be debugged as carefully as the thing you are trying to prove, because
+nobody is motivated to find the bugs that flatter them.
+
+## 2026-08-25 — The AI never ran, and my error handling made sure I could not tell
+
+**Symptom:** First test of the LLM planner on four cases. Every plan came back sensible and
+correctly reasoned — a silent retry for the bank outage, wait-for-salary-day for the insufficient
+funds case, escalation for the merchant-side decline. `cost_paise: 0` on all four. I nearly moved
+on. The zero is the only thing that was wrong on the screen, and it is the kind of zero that reads
+like good news.
+
+**Why:** Two failures stacked, and the second hid the first. `gemini-2.5-flash` had been retired
+for new API keys — every call was returning HTTP 404 with a message telling me which model to use
+instead. And my "graceful degradation" path caught it, fell back to `plan_rules_only`, and carried
+on. So the four good plans I was admiring were my own hand-written rules, being shown back to me
+with an LLM's label on them.
+
+Scaled up, this was about to produce a report card where the "AI on" column and the "AI off"
+column were the same code, with the ablation printing a dead heat and a confident paragraph about
+how the model adds nothing. I would have published that. It would have been completely wrong and
+completely reproducible.
+
+**Fix:** Three things. The model name moved to a constant that is exercised on every run.
+`prewarm()` now *raises* if 100% of planning calls fail, rather than reporting an error count
+nobody reads — a total outage is not a degraded run and must not be allowed to look like one.
+And the report card prints `llm_calls`, `llm_cached` and `llm_fallbacks` in the ablation block,
+so "the model did not actually run" is a number on the page rather than something you have to
+already suspect.
+
+Separately: this model bills its internal reasoning as output tokens (231 thought tokens for a
+5-token answer on a trivial probe). I was only counting `candidatesTokenCount`, which would have
+under-reported the cost of the batch by roughly forty times — in the one column of the report card
+that nobody else publishes.
+
+**What it taught me:** A fallback that is not *counted* is not a fallback, it is a cover-up. The
+entire value of "handle failure gracefully" depends on the failure still being visible after it
+has been handled, and mine was designed so that the more completely the system broke, the more
+normal it looked. I now treat "what does this look like when it is 100% broken?" as a required
+question for every degradation path, not just "what does it look like when one call fails?"

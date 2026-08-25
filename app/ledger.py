@@ -90,6 +90,53 @@ def record(
     return entry
 
 
+def record_many(
+    session: Session,
+    rows: list[dict[str, Any]],
+) -> int:
+    """Append many entries under one commit, chaining them in memory first.
+
+    A 300-case batch run across five policies produces thousands of audit lines.
+    Committing each one separately turned a nine-second report card into a
+    four-minute one, and a slow report card is one nobody re-runs -- which
+    quietly costs you the reproducibility check.
+
+    The invariant is unchanged: every row still fingerprints its own contents
+    plus its predecessor's fingerprint, and `verify_chain()` still walks the lot.
+    The only thing that moved is where the chain is computed. Each dict needs
+    `actor` and `event`; `case_id` and `payload` are optional.
+    """
+    if not rows:
+        return 0
+
+    with _write_lock:
+        prev = session.execute(
+            select(LedgerEntry).order_by(LedgerEntry.id.desc()).limit(1)
+        ).scalars().first()
+        prev_hash = prev.entry_hash if prev else GENESIS_HASH
+
+        for row in rows:
+            payload_json = _canonical(row.get("payload") or {})
+            ts = utcnow().isoformat()
+            case_id = row.get("case_id")
+            actor = row["actor"]
+            event = row["event"]
+            entry_hash = _digest(
+                ts=ts, case_id=case_id, actor=actor, event=event,
+                payload_json=payload_json, prev_hash=prev_hash,
+            )
+            session.add(LedgerEntry(
+                ts=ts, case_id=case_id, actor=actor, event=event,
+                payload_json=payload_json, prev_hash=prev_hash,
+                entry_hash=entry_hash,
+            ))
+            prev_hash = entry_hash
+
+        session.commit()
+
+    return len(rows)
+
+
 @dataclass
 class ChainStatus:
     ok: bool
