@@ -1,8 +1,13 @@
-"""The server.
+"""The server: webhooks in, dashboard out.
 
-Small on purpose today. It exists so that (a) Razorpay has somewhere to send
-webhooks, and (b) the dashboard has somewhere to ask for numbers. The interesting
-parts — Watcher, Thinker, Guard, Doer — arrive on later days and plug in here.
+Two jobs, and both of them are about being observable from outside the process.
+Razorpay needs somewhere to deliver payment events, and a reviewer needs a page
+they can click through without reading any Python.
+
+The routes here are read-only apart from the webhook receiver. Recovery runs are
+started from the command line (`scripts/run_report_card.py`), not from an HTTP
+endpoint, because a batch that sends messages to three hundred people should not
+be one accidental GET away.
 """
 
 from __future__ import annotations
@@ -13,7 +18,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from sqlalchemy.orm import Session
 
-from app import ledger, webhooks
+from app import dashboard, ledger, webhooks
 from app.config import get_settings
 from app.db import get_session, init_db
 
@@ -39,6 +44,7 @@ app = FastAPI(
 )
 
 app.include_router(webhooks.router)
+app.include_router(dashboard.router)
 
 
 @app.get("/health")

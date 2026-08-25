@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recoup</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --line:#262c36; --ink:#e6edf3;
+    --dim:#8b949e; --accent:#3fb950; --warn:#d29922; --bad:#f85149;
+    --blue:#58a6ff; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{padding:22px 28px;border-bottom:1px solid var(--line);
+         display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
+  h1{margin:0;font-size:20px;letter-spacing:-.2px}
+  h1 span{color:var(--dim);font-weight:400;font-size:14px;margin-left:10px}
+  .meta{margin-left:auto;color:var(--dim);font-size:12.5px;font-family:var(--mono)}
+  nav{display:flex;gap:2px;padding:0 28px;border-bottom:1px solid var(--line);
+      background:var(--panel)}
+  nav button{background:none;border:0;color:var(--dim);padding:12px 16px;
+             cursor:pointer;font-size:14px;border-bottom:2px solid transparent}
+  nav button:hover{color:var(--ink)}
+  nav button.on{color:var(--ink);border-bottom-color:var(--blue)}
+  main{padding:26px 28px;max-width:1360px}
+  section{display:none} section.on{display:block}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+         gap:14px;margin-bottom:26px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+  .card .k{color:var(--dim);font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+  .card .v{font-size:25px;margin-top:6px;font-family:var(--mono)}
+  .card .n{color:var(--dim);font-size:12px;margin-top:6px;line-height:1.4}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--line)}
+  th{color:var(--dim);font-weight:500;font-size:12px;text-transform:uppercase;
+     letter-spacing:.5px;white-space:nowrap}
+  td.n,th.n{text-align:right;font-family:var(--mono)}
+  tbody tr:hover{background:#1c2128}
+  .wrap{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+        overflow-x:auto;margin-bottom:22px}
+  .tag{display:inline-block;padding:2px 8px;border-radius:11px;font-size:11.5px;
+       font-family:var(--mono);border:1px solid var(--line)}
+  .ok{color:var(--accent);border-color:#238636} .warnc{color:var(--warn);border-color:#9e6a03}
+  .badc{color:var(--bad);border-color:#8b2c25}  .dimc{color:var(--dim)}
+  .note{color:var(--dim);font-size:13px;margin:-8px 0 22px;max-width:830px;line-height:1.6}
+  .note b{color:var(--ink);font-weight:600}
+  h2{font-size:15px;margin:30px 0 12px;letter-spacing:.2px}
+  h2:first-child{margin-top:0}
+  code,pre{font-family:var(--mono)}
+  pre{background:#0b0e13;border:1px solid var(--line);border-radius:6px;padding:13px;
+      overflow-x:auto;font-size:12.5px;margin:0}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:900px){.row{grid-template-columns:1fr}}
+  input,select{background:#0b0e13;border:1px solid var(--line);color:var(--ink);
+               padding:8px 11px;border-radius:6px;font-size:13.5px;font-family:var(--mono)}
+  .fact{padding:6px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--dim)}
+  .fact:last-child{border:0}
+  .empty{color:var(--dim);padding:26px;text-align:center}
+  .bar{height:6px;background:#0b0e13;border-radius:3px;overflow:hidden;margin-top:7px}
+  .bar i{display:block;height:100%;background:var(--blue)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Recoup <span>revenue recovery, with the false positives shown</span></h1>
+  <div class="meta" id="meta">loading...</div>
+</header>
+
+<nav>
+  <button class="on" data-tab="report">Report card</button>
+  <button data-tab="queue">Case queue</button>
+  <button data-tab="case">Case detail</button>
+  <button data-tab="guard">Guard rules</button>
+  <button data-tab="audit">Audit trail</button>
+</nav>
+
+<main>
+
+<section id="report" class="on">
+  <div class="cards" id="cohort-cards"></div>
+  <p class="note">
+    <b>Caused</b> is the only column worth comparing. It is money that arrived
+    <i>because of</i> the policy: customers who would have paid unprompted are
+    removed from every row. <b>Collected</b> is what a normal recovery dashboard
+    would show you &mdash; note that doing nothing collects a great deal of it.
+    <b>Violations</b> counts guard rules a policy broke; the baselines run ungated,
+    because a merchant blasting their list does not have a compliance layer.
+  </p>
+  <div class="wrap"><table id="report-table"></table></div>
+  <h2>Ablation &mdash; does the model earn its place?</h2>
+  <div class="wrap" id="ablation"></div>
+</section>
+
+<section id="queue">
+  <div class="cards" id="queue-cards"></div>
+  <p class="note">
+    The Watcher's view. No AI here at all &mdash; plain rules over the fields
+    Razorpay already sends. <b>Unrecoverable</b> means <code>error_source:
+    business</code>: the merchant's own configuration, which no message to a
+    customer can fix.
+  </p>
+  <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+    <select id="f-kind"><option value="">all kinds</option></select>
+    <select id="f-rec">
+      <option value="">all recoverability</option>
+      <option value="contactable">contactable</option>
+      <option value="retryable">retryable</option>
+      <option value="unrecoverable">unrecoverable</option>
+    </select>
+  </div>
+  <div class="wrap"><table id="queue-table"></table></div>
+</section>
+
+<section id="case">
+  <div style="margin-bottom:16px;display:flex;gap:10px">
+    <input id="case-id" placeholder="case_0001" size="18">
+    <button onclick="loadCase()" style="background:#21262d;border:1px solid var(--line);
+            color:var(--ink);padding:8px 15px;border-radius:6px;cursor:pointer">Open</button>
+  </div>
+  <div id="case-body" class="empty">Pick a case from the queue, or type an id.</div>
+</section>
+
+<section id="guard">
+  <p class="note">
+    Every one of these can refuse a money action, and every one has a test in
+    <code>tests/test_guard.py</code> proving it does. The AI cannot see this list
+    at decision time, cannot argue with it, and cannot modify it.
+  </p>
+  <div class="wrap"><table id="guard-table"></table></div>
+</section>
+
+<section id="audit">
+  <div class="cards" id="audit-cards"></div>
+  <p class="note">
+    Append-only, twice over: SQLite triggers refuse <code>UPDATE</code> and
+    <code>DELETE</code>, and each row fingerprints its own contents plus the
+    fingerprint of the row before it, so an edit made outside the database is
+    still detectable and the report names where it started.
+  </p>
+  <div class="wrap"><table id="audit-table"></table></div>
+</section>
+
+</main>
+
+<script>
+const rs = p => "Rs " + Math.round(p/100).toLocaleString("en-IN");
+const el = (h) => { const d=document.createElement("div"); d.innerHTML=h; return d.firstElementChild; };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const get = async u => { const r = await fetch(u); if(!r.ok) throw new Error((await r.json()).detail || r.statusText); return r.json(); };
+
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav button").forEach(x => x.classList.remove("on"));
+  document.querySelectorAll("section").forEach(x => x.classList.remove("on"));
+  b.classList.add("on");
+  document.getElementById(b.dataset.tab).classList.add("on");
+});
+
+function card(k, v, n) {
+  return `<div class="card"><div class="k">${k}</div><div class="v">${v}</div>
+          ${n ? `<div class="n">${n}</div>` : ""}</div>`;
+}
+
+async function loadMeta() {
+  try {
+    const m = await get("/api/meta");
+    document.getElementById("meta").textContent =
+      `${m.cases} cases | planner ${m.model} | as of ${m.as_of.slice(0,10)}`;
+  } catch(e) { document.getElementById("meta").textContent = "no database"; }
+}
+
+async function loadReport() {
+  let d;
+  try { d = await get("/api/report"); }
+  catch(e) {
+    document.getElementById("report-table").innerHTML =
+      `<tr><td class="empty">${esc(e.message)}</td></tr>`;
+    return;
+  }
+  const c = d.cohort;
+  document.getElementById("cohort-cards").innerHTML =
+    card("At risk", rs(c.at_risk_paise), `${c.cases} cases in the window`) +
+    card("Winnable", rs(c.winnable_paise),
+         `${c.winnable_cases} cases &mdash; the only money any policy can earn`) +
+    card("Arriving anyway", rs(c.self_paying_paise),
+         `${c.self_paying_cases} cases. Chasing these is the false-positive bill`) +
+    card("Unwinnable", rs(c.unwinnable_paise),
+         `${c.unwinnable_cases} merchant-side declines. No message helps`);
+
+  const best = Math.max(...d.policies.map(p => p.caused_paise), 1);
+  const rows = d.policies.map(p => `
+    <tr>
+      <td><code>${esc(p.policy)}</code>
+          <div class="n" style="color:var(--dim);font-size:11.5px">${esc(p.blurb)}</div></td>
+      <td class="n"><b>${rs(p.caused_paise)}</b>
+          <div class="bar"><i style="width:${(p.caused_paise/best*100).toFixed(1)}%"></i></div></td>
+      <td class="n">${(p.share_of_winnable*100).toFixed(1)}%</td>
+      <td class="n dimc">${rs(p.collected_paise)}</td>
+      <td class="n">${p.contacts}</td>
+      <td class="n">${p.retries}</td>
+      <td class="n">${p.escalations}</td>
+      <td class="n ${p.opt_outs > 20 ? "badc" : ""}">${p.opt_outs}</td>
+      <td class="n ${p.false_interventions > 40 ? "badc" : "warnc"}">${p.false_interventions}</td>
+      <td class="n ${p.violations_total ? "badc" : "ok"}">${p.violations_total}</td>
+      <td class="n">${p.cost_pct_of_caused === null ? "n/a" : p.cost_pct_of_caused.toFixed(2)+"%"}</td>
+    </tr>`).join("");
+  document.getElementById("report-table").innerHTML = `
+    <thead><tr><th>Policy</th><th class="n">Caused</th><th class="n">% winnable</th>
+    <th class="n">Collected</th><th class="n">Msgs</th><th class="n">Retries</th>
+    <th class="n">Escalated</th><th class="n">Opt-outs</th><th class="n">False +</th>
+    <th class="n">Violations</th><th class="n">Cost %</th></tr></thead><tbody>${rows}</tbody>`;
+
+  const byName = Object.fromEntries(d.policies.map(p => [p.policy, p]));
+  const a = byName["recoup"], r = byName["rules_only"];
+  const box = document.getElementById("ablation");
+  if (!a || !r) { box.innerHTML = `<div class="empty">run the agent to see the ablation</div>`; return; }
+  const delta = a.caused_paise - r.caused_paise;
+  const pct = r.caused_paise ? (delta / r.caused_paise * 100) : 0;
+  const line = (label, av, rv) =>
+    `<tr><td>${label}</td><td class="n">${av}</td><td class="n">${rv}</td></tr>`;
+  box.innerHTML = `<table>
+    <thead><tr><th></th><th class="n">AI on (recoup)</th><th class="n">AI off (rules)</th></tr></thead>
+    <tbody>
+      ${line("money caused", rs(a.caused_paise), rs(r.caused_paise))}
+      ${line("share of winnable", (a.share_of_winnable*100).toFixed(1)+"%", (r.share_of_winnable*100).toFixed(1)+"%")}
+      ${line("messages sent", a.contacts, r.contacts)}
+      ${line("messages per Rs 1000 caused",
+             a.contacts_per_1000_caused?.toFixed(2) ?? "n/a",
+             r.contacts_per_1000_caused?.toFixed(2) ?? "n/a")}
+      ${line("customers lost to opt-out", a.opt_outs, r.opt_outs)}
+      ${line("chased someone already paying", a.false_interventions, r.false_interventions)}
+      ${line("handed to a human", a.escalations, r.escalations)}
+      ${line("model cost for the batch", rs(a.llm_cost_paise), "Rs 0")}
+      ${line("planner calls", `${a.llm_calls} live / ${a.llm_cached} cached / ${a.llm_fallbacks} fell back`, "-")}
+    </tbody></table>
+    <div style="padding:15px 12px;border-top:1px solid var(--line);font-size:13.5px">
+      <span class="tag ${delta > 0 ? "ok" : "badc"}">
+        ${delta > 0 ? "the model earns its place" : "the rules win"}</span>
+      &nbsp; ${delta >= 0 ? "+" : "&minus;"}${rs(Math.abs(delta))} caused
+      (${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%) versus rules only.
+    </div>`;
+}
+
+async function loadQueue() {
+  const kind = document.getElementById("f-kind").value;
+  const rec = document.getElementById("f-rec").value;
+  let d;
+  try { d = await get(`/api/cases?limit=200&kind=${kind}&recoverability=${rec}`); }
+  catch(e) {
+    document.getElementById("queue-table").innerHTML =
+      `<tr><td class="empty">${esc(e.message)}</td></tr>`; return;
+  }
+  const s = d.summary;
+  document.getElementById("queue-cards").innerHTML =
+    card("Open cases", s.cases, rs(s.at_risk_paise) + " at risk") +
+    card("Hard-stopped", s.hard_stopped, "opted out, or unfixable by any message") +
+    card("Need a human", s.needs_human, "above the auto-action ceiling") +
+    card("By band",
+         Object.entries(s.by_risk_band).map(([k,v]) => `${k[0].toUpperCase()}${v}`).join(" "),
+         "high / medium / low");
+
+  const sel = document.getElementById("f-kind");
+  if (sel.options.length === 1) {
+    [...new Set(d.cases.map(c => c.kind))].sort().forEach(k =>
+      sel.add(new Option(k.replace(/_/g," "), k)));
+  }
+
+  document.getElementById("queue-table").innerHTML = `
+    <thead><tr><th>Case</th><th>Kind</th><th class="n">Amount</th><th>Recoverability</th>
+    <th>Failure</th><th>Source</th><th class="n">Band</th><th>Flags</th></tr></thead>
+    <tbody>${d.cases.map(c => `
+      <tr style="cursor:pointer" onclick="openCase('${c.case_id}')">
+        <td><code>${esc(c.case_id)}</code></td>
+        <td>${esc(c.kind.replace(/_/g," "))}</td>
+        <td class="n">${rs(c.amount_rupees*100)}</td>
+        <td><span class="tag ${c.recoverability==="unrecoverable"?"badc":
+                               c.recoverability==="retryable"?"warnc":"dimc"}">
+            ${c.recoverability}</span></td>
+        <td class="dimc">${esc(c.failure_reason || "-")}</td>
+        <td class="dimc">${esc(c.error_source || "-")}</td>
+        <td class="n">${c.risk_band}</td>
+        <td>${c.customer_opted_out ? '<span class="tag badc">opted out</span> ' : ""}
+            ${c.needs_human_approval ? '<span class="tag warnc">human</span>' : ""}</td>
+      </tr>`).join("")}</tbody>`;
+}
+
+function openCase(id) {
+  document.getElementById("case-id").value = id;
+  document.querySelector('nav button[data-tab="case"]').click();
+  loadCase();
+}
+
+async function loadCase() {
+  const id = document.getElementById("case-id").value.trim();
+  const body = document.getElementById("case-body");
+  if (!id) return;
+  let d;
+  try { d = await get(`/api/cases/${encodeURIComponent(id)}`); }
+  catch(e) { body.className="empty"; body.textContent = e.message; return; }
+  body.className = "";
+
+  const c = d.case, s = d.signal;
+  let html = `<div class="cards">
+    ${card("Amount", rs(c.amount_paise), esc(c.kind.replace(/_/g," ")))}
+    ${card("Recoverability", s.recoverability, esc(s.error_source ? "error_source: "+s.error_source : "no decline"))}
+    ${card("Risk band", s.risk_band, "priority " + s.facts.length + " facts extracted")}
+    ${card("Hard stop", s.hard_stop || "none", s.hard_stop ? "no contact permitted" : "contact allowed")}
+  </div>
+  <div class="row">
+    <div><h2>What the Watcher knew</h2><div class="wrap" style="padding:14px">
+      ${s.facts.map(f => `<div class="fact">${esc(f)}</div>`).join("") ||
+        '<div class="fact">no notable facts</div>'}
+    </div></div>
+    <div><h2>Raw case</h2><div class="wrap"><pre>${esc(JSON.stringify(c.meta, null, 1))}</pre></div></div>
+  </div>
+  <h2>Every decision made about this case</h2>`;
+
+  if (!d.history.length) {
+    html += `<div class="wrap"><div class="empty">No run recorded yet. Run
+             <code>python -m scripts.run_report_card</code> without
+             <code>--no-audit</code>.</div></div>`;
+  }
+  for (const h of d.history) {
+    const p = h.payload;
+    if (h.event !== "case_handled") continue;
+    html += `<div class="wrap" style="padding:15px">
+      <div style="margin-bottom:10px"><span class="tag">${esc(p.policy)}</span>
+      <span class="dimc" style="font-size:12px;margin-left:9px">${esc(h.ts)}</span></div>`;
+    if (p.planner && p.planner.case_summary)
+      html += `<div class="fact" style="color:var(--ink)">"${esc(p.planner.case_summary)}"</div>`;
+    if (p.planner && p.planner.fallback)
+      html += `<div class="fact badc">planner unavailable, fell back to rules:
+               ${esc(p.planner.why || "")}</div>`;
+    html += `<table style="margin-top:9px"><thead><tr><th>Proposed</th><th class="n">When</th>
+             <th>Guard</th><th>Why</th></tr></thead><tbody>`;
+    for (const dec of p.decisions || []) {
+      html += `<tr>
+        <td><code>${esc(dec.action)}</code></td>
+        <td class="n dimc">+${dec.wait_days}d ${String(dec.hour_ist).padStart(2,"0")}:00</td>
+        <td><span class="tag ${dec.allowed ? "ok" : "badc"}">
+            ${dec.allowed ? "allowed" : esc(dec.rule)}</span></td>
+        <td class="dimc" style="font-size:12.5px">${esc(dec.allowed ? dec.reason : dec.detail)}</td>
+      </tr>`;
+    }
+    html += `</tbody></table>`;
+    const o = p.outcome || {};
+    html += `<div style="margin-top:11px;font-size:13px" class="dimc">
+      outcome: <span class="tag ${o.caused ? "ok" : o.paid ? "warnc" : "dimc"}">
+      ${o.caused ? "recovered by us" : o.paid ? "paid anyway (not our doing)" : "not recovered"}</span>
+      &nbsp; ${o.contacts} message(s), ${o.retries} retry(ies), cost ${rs(o.cost_paise||0)}
+      ${o.false_intervention ? '&nbsp;<span class="tag badc">false positive</span>' : ""}
+      ${o.opted_out ? '&nbsp;<span class="tag badc">opted out</span>' : ""}
+    </div></div>`;
+  }
+  body.innerHTML = html;
+}
+
+async function loadGuard() {
+  const d = await get("/api/guard/rules");
+  document.getElementById("guard-table").innerHTML = `
+    <thead><tr><th>Rule</th><th>Why it exists</th></tr></thead>
+    <tbody>${d.rules.map(r =>
+      `<tr><td><code>${esc(r.rule)}</code></td><td class="dimc">${esc(r.why)}</td></tr>`
+    ).join("")}</tbody>`;
+}
+
+async function loadAudit() {
+  let d;
+  try { d = await get("/api/audit?limit=60"); }
+  catch(e) { document.getElementById("audit-table").innerHTML =
+    `<tr><td class="empty">${esc(e.message)}</td></tr>`; return; }
+  document.getElementById("audit-cards").innerHTML =
+    card("Entries", d.chain.entries, "append-only, hash-chained") +
+    card("Chain", d.chain.intact ? "intact" : "BROKEN",
+         esc(d.chain.detail)) +
+    card("Broken at", d.chain.broken_at ?? "-", "entry id where tampering starts");
+  document.getElementById("audit-table").innerHTML = `
+    <thead><tr><th class="n">#</th><th>When</th><th>Actor</th><th>Event</th>
+    <th>Case</th><th>Hash</th></tr></thead>
+    <tbody>${d.entries.map(e => `
+      <tr><td class="n dimc">${e.id}</td>
+      <td class="dimc" style="font-size:12px">${esc(e.ts.slice(0,19).replace("T"," "))}</td>
+      <td>${esc(e.actor)}</td><td><code>${esc(e.event)}</code></td>
+      <td class="dimc">${esc(e.case_id || "-")}</td>
+      <td class="dimc" style="font-size:11.5px">${esc(e.prev_hash)}&rarr;${esc(e.entry_hash)}</td>
+      </tr>`).join("")}</tbody>`;
+}
+
+document.getElementById("f-kind").onchange = loadQueue;
+document.getElementById("f-rec").onchange = loadQueue;
+document.getElementById("case-id").addEventListener("keydown", e => {
+  if (e.key === "Enter") loadCase();
+});
+
+loadMeta(); loadReport(); loadQueue(); loadGuard(); loadAudit();
+</script>
+</body>
+</html>

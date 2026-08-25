@@ -69,26 +69,49 @@ from app.watcher import Signal
 
 CACHE_PATH = PROJECT_ROOT / "data" / "thinker_cache.json"
 
-# Chosen for the unit economics, not for the leaderboard. The median case in
-# this cohort is worth about Rs 800, so a planner that costs several paise per
-# case and takes ten seconds is the wrong tool regardless of how well it reasons.
-# This tier answers in ~1.5s, emits no billed reasoning tokens, and still gets
-# the error_source and salary-day judgements right -- which the report card
-# checks rather than assumes.
-DEFAULT_MODEL = "gemini-3.5-flash-lite"
+# Chosen for the unit economics, not for the leaderboard. The median case in this
+# cohort is worth about Rs 800, so a planner costing several paise and ten seconds
+# per case is the wrong tool however well it reasons. This one answers in ~2s and
+# still gets the error_source and salary-day judgements right, which the report
+# card checks rather than assumes.
+DEFAULT_MODEL = "openai/gpt-oss-120b"
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+
+def provider_for(model: str) -> str:
+    """Which backend serves this model name.
+
+    Two providers, not for redundancy theatre -- because one of them ran out of
+    free-tier quota partway through building this, throttled to roughly a call a
+    minute, and a 300-case batch stopped being possible. The planner was already
+    behind one function, so a second implementation cost twenty lines. That is
+    the argument for keeping model access behind an interface even in a
+    thirteen-day project: the thing you cannot control is the vendor.
+    """
+    return "gemini" if "gemini" in model else "groq"
 
 # Token counts in the report card are exact -- they come back from the API. The
-# rupee figure is those exact counts multiplied by the rate below, which is the
-# published list price for the Gemini Flash tier converted at Rs 87/USD. Stating
-# the assumption here rather than burying a number means the cost column can be
-# recomputed by anyone who disagrees with the rate.
-USD_PER_M_INPUT = 0.30
-USD_PER_M_OUTPUT = 2.50
+# rupee figure is those exact counts times the rates below: published list prices
+# in USD per million tokens, converted at Rs 87/USD. The assumption is stated here
+# rather than buried in a constant so that anyone who disagrees with the rate can
+# recompute the cost column instead of having to distrust it.
 RUPEES_PER_USD = 87.0
 
-INPUT_PAISE_PER_1K = USD_PER_M_INPUT / 1000 * RUPEES_PER_USD * 100
-OUTPUT_PAISE_PER_1K = USD_PER_M_OUTPUT / 1000 * RUPEES_PER_USD * 100
+USD_PER_M: dict[str, tuple[float, float]] = {          # model -> (input, output)
+    "openai/gpt-oss-120b": (0.15, 0.75),
+    "openai/gpt-oss-20b": (0.10, 0.50),
+    "gemini-3.5-flash-lite": (0.10, 0.40),
+    "gemini-3.6-flash": (0.30, 2.50),
+}
+FALLBACK_USD_PER_M = (0.30, 2.50)                       # assume the expensive tier
+
+
+def rates_for(model: str) -> tuple[float, float]:
+    """Paise per 1000 input tokens, paise per 1000 output tokens."""
+    usd_in, usd_out = USD_PER_M.get(model, FALLBACK_USD_PER_M)
+    return (usd_in / 1000 * RUPEES_PER_USD * 100,
+            usd_out / 1000 * RUPEES_PER_USD * 100)
 
 TIMEOUT_SECONDS = 45.0
 MAX_WORKERS = 6
@@ -246,15 +269,15 @@ class Reply:
     input_tokens: int = 0
     output_tokens: int = 0
     source: str = "api"          # api | cache
+    model: str = ""
 
     @property
     def cost_paise(self) -> int:
         if self.source == "cache":
             return 0
-        return round(
-            self.input_tokens / 1000 * INPUT_PAISE_PER_1K
-            + self.output_tokens / 1000 * OUTPUT_PAISE_PER_1K
-        )
+        per_1k_in, per_1k_out = rates_for(self.model)
+        return round(self.input_tokens / 1000 * per_1k_in
+                     + self.output_tokens / 1000 * per_1k_out)
 
 
 class LLMUnavailable(RuntimeError):
@@ -263,6 +286,52 @@ class LLMUnavailable(RuntimeError):
 
 RETRY_STATUS = {429, 500, 502, 503, 504}
 MAX_ATTEMPTS = 4
+
+
+def _call_groq(prompt: str, *, model: str, api_key: str, client: httpx.Client,
+               attempt: int = 1) -> Reply:
+    """OpenAI-compatible chat completions. Same contract as the Gemini path."""
+    response = client.post(
+        GROQ_URL,
+        headers={"Authorization": f"Bearer {api_key}", "content-type": "application/json"},
+        json={
+            "model": model,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.0,
+            "response_format": {"type": "json_object"},
+            "max_tokens": 1200,
+        },
+        timeout=TIMEOUT_SECONDS,
+    )
+
+    if response.status_code in RETRY_STATUS and attempt < MAX_ATTEMPTS:
+        time.sleep(min(8.0, 0.75 * 2 ** (attempt - 1)) + random.random() * 0.25)
+        return _call_groq(prompt, model=model, api_key=api_key,
+                          client=client, attempt=attempt + 1)
+
+    if response.status_code != 200:
+        raise LLMUnavailable(
+            f"{model} returned HTTP {response.status_code} after {attempt} attempt(s)"
+        )
+
+    body = response.json()
+    choices = body.get("choices") or []
+    if not choices:
+        raise LLMUnavailable(f"{model} returned no choices")
+
+    text = (choices[0].get("message", {}).get("content") or "").strip()
+    if not text:
+        raise LLMUnavailable(f"{model} returned an empty answer")
+
+    usage = body.get("usage", {})
+    return Reply(
+        text=text, model=model,
+        input_tokens=int(usage.get("prompt_tokens", 0)),
+        output_tokens=int(usage.get("completion_tokens", 0)),
+    )
 
 
 def _call_gemini(prompt: str, *, model: str, api_key: str, client: httpx.Client,
@@ -319,7 +388,7 @@ def _call_gemini(prompt: str, *, model: str, api_key: str, client: httpx.Client,
     # else publishes; publishing a flattering version of it would be worse than
     # leaving it out.
     return Reply(
-        text=text,
+        text=text, model=model,
         input_tokens=int(usage.get("promptTokenCount", 0)),
         output_tokens=int(usage.get("candidatesTokenCount", 0))
         + int(usage.get("thoughtsTokenCount", 0)),
@@ -370,7 +439,7 @@ class Thinker:
         cached = self.cache.get(key)
         if cached is not None:
             return Reply(
-                text=cached["text"],
+                text=cached["text"], model=self.model,
                 input_tokens=cached.get("input_tokens", 0),
                 output_tokens=cached.get("output_tokens", 0),
                 source="cache",
@@ -380,12 +449,16 @@ class Thinker:
             raise LLMUnavailable("offline: this case is not in the committed cache")
 
         settings = get_settings()
-        if not settings.gemini_api_key:
-            raise LLMUnavailable("no GEMINI_API_KEY configured")
+        provider = provider_for(self.model)
+        api_key = (settings.gemini_api_key if provider == "gemini"
+                   else settings.groq_api_key)
+        if not api_key:
+            raise LLMUnavailable(f"no API key configured for provider {provider!r}")
 
-        reply = _call_gemini(
+        call = _call_gemini if provider == "gemini" else _call_groq
+        reply = call(
             prompt, model=self.model,
-            api_key=settings.gemini_api_key, client=self._client_or_new(),
+            api_key=api_key, client=self._client_or_new(),
         )
         self.cache.put(key, {
             "text": reply.text,

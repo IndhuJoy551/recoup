@@ -274,3 +274,27 @@ entire value of "handle failure gracefully" depends on the failure still being v
 has been handled, and mine was designed so that the more completely the system broke, the more
 normal it looked. I now treat "what does this look like when it is 100% broken?" as a required
 question for every degradation path, not just "what does it look like when one call fails?"
+
+## 2026-08-25 — The script that proves nothing gets lost, deleted the cohort
+
+**Symptom:** Ran `scripts/break_it.py` — the "break it on purpose" demo — and it printed
+`5/5 failures handled as designed`. Then the report card started reporting 40 cases instead of
+300, with a completely different fingerprint.
+
+**Why:** Scenario 4 ("the planning model is unreachable for every case") needs a cohort to run
+against, so it did `session.query(Case).delete()` and loaded a 40-case one. Against the real
+database. The script whose entire thesis is *nothing is ever silently lost* silently destroyed
+the thing every published number is computed from — and reported complete success while doing it,
+because I had only written checks for the failures I was demonstrating, not for the damage the
+demonstration itself caused.
+
+**Fix:** `break_it.py` sets `DATABASE_URL` to a fresh temp file **before importing any app
+module** — `app.db` builds its engine at import time, so doing it afterwards would have been too
+late and would have looked like it worked. The scratch path is printed at the top of the run so
+it is obvious where it went.
+
+**What it taught me:** I had been treating "test code" and "demo code" as lower-stakes than
+application code, and they are not — they run with the same credentials against the same database.
+The fix was three lines and the risk was the entire dataset. Test isolation is not hygiene, it is
+a blast radius decision, and `conftest.py` had got this right on day one purely because pytest
+made the right thing easy. Nothing made it easy in a script, so I did the wrong thing.

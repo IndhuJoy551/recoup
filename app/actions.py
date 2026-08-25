@@ -139,9 +139,11 @@ class Action:
         where untrusted text becomes trusted text.
         """
         replacements = {
-            "₹": "Rs ", "’": "'", "‘": "'",
-            "“": '"', "”": '"', "—": " -- ", "–": "-",
-            " ": " ",
+            "₹": "Rs ",                                  # rupee sign
+            "’": "'", "‘": "'",                      # smart quotes
+            "“": '"', "”": '"',
+            "—": " -- ", "–": "-", "‑": "-",    # dashes, non-breaking hyphen
+            " ": " ", "…": "...", "→": "->",
         }
         for bad, good in replacements.items():
             text = text.replace(bad, good)
