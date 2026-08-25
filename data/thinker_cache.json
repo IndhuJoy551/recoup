@@ -14,6 +14,11 @@
   "output_tokens": 108,
   "text": "{\"plan\": [{\"action\": \"schedule_retry\", \"wait_days\": 0, \"hour_ist\": 10, \"reason\": \"The bank outage that caused the failure is resolved and the card is valid, so a silent retry on salary day has the highest chance of success without annoying the customer.\"}], \"case_summary\": \"A subscription auto-debit for a first-time customer failed due to a bank-side issuer outage, but the mandate and card remain valid and ready for a retry.\"}"
  },
+ "012d70e861f2bf6ad308fb3338f7c49d": {
+  "input_tokens": 1161,
+  "output_tokens": 973,
+  "text": "{\"plan\":[{\"action\":\"escalate_to_human\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Amount Rs\u202f8,640 exceeds auto\u2011action ceiling and customer is first\u2011time B2B; policy requires human approval before any outreach.\"},{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"After approval, provide a one\u2011tap payment link \u2013 highest conversion for settling the overdue invoice.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If payment not received after 24\u202fh, send a gentle reminder to nudge the customer without pressure.\"}],\"case_summary\":\"First\u2011time B2B customer overdue Rs\u202f8,640 invoice, amount exceeds auto\u2011action limit and needs human approval before contact.\"}"
+ },
  "01397e4287213b469754f06cc55ad71f": {
   "input_tokens": 897,
   "output_tokens": 126,
@@ -68,6 +73,11 @@
   "input_tokens": 918,
   "output_tokens": 117,
   "text": "{\n  \"plan\": [\n    {\n      \"action\": \"send_payment_link\",\n      \"wait_days\": 0,\n      \"hour_ist\": 10,\n      \"reason\": \"This is a valued repeat customer who abandoned checkout with high intent, and morning timing respects their preference while salary day arrives tomorrow.\"\n    }\n  ],\n  \"case_summary\": \"A repeat customer with high intent abandoned their wallet checkout for a moderate amount, making them a prime candidate for a single gentle payment link.\"\n}"
+ },
+ "06b0ece1ee9c1844e0b2ceb52b87fcaa": {
+  "input_tokens": 1116,
+  "output_tokens": 568,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"First-time customer abandoned checkout; a one\u2011tap payment link gives the highest conversion chance and lets them complete the purchase now while the amount is small.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If no payment after the initial link, a gentle reminder the next day (post\u2011salary) nudges the customer without pressure, increasing chances of payment.\"}],\"case_summary\":\"First\u2011time customer abandoned a \u20b91016 checkout; payment not attempted yet and recoverable.\"}"
  },
  "07354e88b5b49ea7babe34c73774e7bc": {
   "input_tokens": 1127,
@@ -138,6 +148,11 @@
   "input_tokens": 983,
   "output_tokens": 174,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"escalate_to_human\",\n   \"wait_days\": 0,\n   \"hour_ist\": 10,\n   \"reason\": \"Amount exceeds the Rs 5,000 auto-action ceiling requiring human approval before proceeding.\"\n  },\n  {\n   \"action\": \"send_reminder\",\n   \"wait_days\": 1,\n   \"hour_ist\": 10,\n   \"reason\": \"Light touch reminder suited for a repeat B2B customer with prior contacts to minimize opt-out risk.\"\n  }\n ],\n \"case_summary\": \"An overdue B2B invoice of Rs 7,342 for a repeat customer requires human approval followed by a gentle reminder.\"\n}"
+ },
+ "0cb98178587c00aa90ba29e3f3d28492": {
+  "input_tokens": 1145,
+  "output_tokens": 909,
+  "text": "{\"plan\":[{\"action\":\"schedule_retry\",\"wait_days\":2,\"hour_ist\":10,\"reason\":\"The netbanking instrument is still valid, and the failure was due to insufficient funds. Salary arrives tomorrow, so a silent retry after the salary day (day\u202f2) gives the account a chance to be funded without bothering the customer.\"},{\"action\":\"send_payment_link\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the post\u2011salary retry still fails, the customer must take action. Sending a one\u2011tap payment link the next day provides the easiest way to settle the \u20b9654 balance once funds are available, maximizing conversion while keeping the tone friendly.\"}],\"case_summary\":\"Payment declined for insufficient funds; salary arrives in 1\u202fday, so retry after salary then request payment via a link.\"}"
  },
  "0d5b9f74ab3975aecd22aaf08013360b": {
   "input_tokens": 1103,
@@ -224,6 +239,11 @@
   "output_tokens": 1200,
   "text": "{\"plan\":[{\"action\":\"schedule_retry\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Silent retry now as the card is still valid and the failure was a customer\u2011side timeout; no annoyance and may succeed before salary funds arrive.\"},{\"action\":\"send_payment_link\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"After 24\u202fh (likely after salary credit), send a one\u2011tap payment link so the customer can quickly settle the \u20b9562 balance.\"}]}"
  },
+ "166e82f51024a58d319e52310caedce9": {
+  "input_tokens": 1118,
+  "output_tokens": 467,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Customer abandoned checkout; a one\u2011tap payment link gives the easiest way to complete the netbanking payment now before the salary day passes.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the link did not convert, a gentle reminder 24\u202fhours later nudges the customer without pressure, respecting the 9\u201121\u202fIST window and contact limits.\"}],\"case_summary\":\"First\u2011time customer abandoned a netbanking checkout of \u20b91294, no payment captured yet.\"}"
+ },
  "1697ad1914c3dcc20621771a3dc6c760": {
   "input_tokens": 940,
   "output_tokens": 84,
@@ -283,6 +303,11 @@
   "input_tokens": 1155,
   "output_tokens": 289,
   "text": "{\"plan\":[{\"action\":\"do_nothing\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Customer has opted out of recovery contact; policy forbids any outreach or retry, so the only permissible step is do_nothing.\"}],\"case_summary\":\"Customer opted out of recovery contact; no action can be taken.\"}"
+ },
+ "1c5952f14225a162cd31e763e7e8056a": {
+  "input_tokens": 1126,
+  "output_tokens": 739,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Customer cancelled the UPI payment; a one\u2011tap payment link lets them quickly restart the transaction without pressure, suitable for a repeat buyer.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the link is not used, a gentle reminder the next day nudges the customer without a hard sell, respecting the light\u2011touch relationship.\"}],\"case_summary\":\"Customer cancelled a \u20b91866 UPI payment; repeat buyer, light\u2011touch approach needed.\"}"
  },
  "1ca97a37192e6ba31075ecac040da8d4": {
   "input_tokens": 898,
@@ -438,6 +463,11 @@
   "input_tokens": 952,
   "output_tokens": 230,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"escalate_to_human\",\n   \"wait_days\": 0,\n   \"hour_ist\": 10,\n   \"reason\": \"The invoice amount of Rs 10,079 exceeds the Rs 5,000 auto-action ceiling, requiring human approval before any recovery action can proceed.\"\n  },\n  {\n   \"action\": \"send_payment_link\",\n   \"wait_days\": 1,\n   \"hour_ist\": 11,\n   \"reason\": \"Since salary day is tomorrow, sending a payment link at an optimal morning hour right after salary day maximizes the chance of B2B payment clearance for this severely overdue invoice.\"\n  }\n ],\n \"case_summary\": \"A first-time B2B customer is 93 days past terms for a Rs 10,079 invoice, requiring initial human approval due to the amount exceeding the auto-action ceiling, followed by a payment link timed for salary day.\"\n}"
+ },
+ "250e7432e67f7453d11c62db0f32e551": {
+  "input_tokens": 1115,
+  "output_tokens": 579,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"First-time customer abandoned checkout; a one\u2011tap payment link gives the easiest way to complete the 814\u202f\u20b9 purchase now before they potentially run out of attention.\"},{\"action\":\"send_reminder\",\"wait_days\":2,\"hour_ist\":11,\"reason\":\"If no payment after 2 days (post\u2011salary), a gentle reminder nudges the customer without pressure, keeping the relationship positive while still encouraging payment.\"}],\"case_summary\":\"First\u2011time customer left an 814\u202f\u20b9 checkout unpaid; payment is contactable and likely pending funds after salary tomorrow.\"}"
  },
  "25408582c04a293b3aa1c8917632e9cf": {
   "input_tokens": 1169,
@@ -719,6 +749,11 @@
   "output_tokens": 186,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"schedule_retry\",\n   \"wait_days\": 1,\n   \"hour_ist\": 10,\n   \"reason\": \"Wait until salary day tomorrow when the account will likely be topped up, then silently retry the charge before sending any messages.\"\n  },\n  {\n   \"action\": \"send_payment_link\",\n   \"wait_days\": 1,\n   \"hour_ist\": 11,\n   \"reason\": \"If the silent retry fails, send a payment link with a one-tap option to complete the payment now that salary day has passed.\"\n  }\n ],\n \"case_summary\": \"Subscription auto-debit failed for a first-time customer due to insufficient funds, which will be resolved after salary day in 1 day.\"\n}"
  },
+ "37ce2dfab7957498e54053e333e1c7c5": {
+  "input_tokens": 1147,
+  "output_tokens": 862,
+  "text": "{\"plan\":[{\"action\":\"schedule_retry\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Silent retry after salary is likely to succeed; no customer contact, respects low\u2011pressure approach for a repeat low\u2011risk buyer.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the silent retry still fails, a gentle reminder with no payment link nudges the customer without pressuring them, fitting the light\u2011touch needed after two prior contacts.\"}],\"case_summary\":\"Repeat low\u2011value customer abandoned checkout; payment likely pending due to upcoming salary, so a silent retry first, then a light reminder if needed.\"}"
+ },
  "381b40e78c8a485e8b77f2414db2a53f": {
   "input_tokens": 1112,
   "output_tokens": 113,
@@ -778,6 +813,11 @@
   "input_tokens": 1127,
   "output_tokens": 119,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"send_payment_link\",\n   \"wait_days\": 0,\n   \"hour_ist\": 10,\n   \"reason\": \"The customer abandoned checkout with high intent, so sending a direct payment link during morning hours provides a frictionless path to complete the transaction.\"\n  }\n ],\n \"case_summary\": \"A first-time customer abandoned their netbanking checkout for a low-risk, low-value purchase and can be successfully converted with a single payment link.\"\n}"
+ },
+ "3b77a5386c29476ffea484ee521ef05b": {
+  "input_tokens": 1152,
+  "output_tokens": 664,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Card expired means the saved instrument cannot be retried; sending a one\u2011tap payment link now gives the customer an easy way to provide a new payment method before salary arrives tomorrow.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the payment link is not acted on within 24\u202fhours, a gentle reminder the next day (after salary) nudges the customer without pressure, increasing the chance of collection.\"}],\"case_summary\":\"Subscription auto\u2011debit failed because the saved card/UPI instrument expired; the customer must supply a new payment method to recover the \u20b9591 owed.\"}"
  },
  "3b90c6f1131e4254af0a6cad8a191b75": {
   "input_tokens": 943,
@@ -909,6 +949,11 @@
   "output_tokens": 120,
   "text": "{\n  \"plan\": [\n    {\n      \"action\": \"send_payment_link\",\n      \"wait_days\": 0,\n      \"hour_ist\": 10,\n      \"reason\": \"Customer showed high intent by reaching the payment page for an abandoned checkout and is one day away from salary day, making morning timing ideal for conversion.\"\n    }\n  ],\n  \"case_summary\": \"Customer abandoned checkout via netbanking with high intent, and we are sending a payment link right before salary day to capture the sale.\"\n}"
  },
+ "451d0e1945784efcfb5a780fd9d7e64d": {
+  "input_tokens": 1105,
+  "output_tokens": 877,
+  "text": "{\"plan\":[{\"action\":\"schedule_retry\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"Salary is expected tomorrow; retry after funds are likely available. Silent retry avoids bothering the customer and may succeed if the failure was due to temporary insufficient balance.\"},{\"action\":\"send_payment_link\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the silent retry after salary still hasn't cleared, send a one\u2011tap payment link so the customer can complete the \u20b9701 netbanking payment easily without further friction.\"}],\"case_summary\":\"Customer abandoned a netbanking checkout for \u20b9701; likely insufficient funds until salary arrives tomorrow.\"}"
+ },
  "45c33ef95048827641bc1bf3d323bbcb": {
   "input_tokens": 881,
   "output_tokens": 121,
@@ -943,6 +988,11 @@
   "input_tokens": 1176,
   "output_tokens": 374,
   "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"The saved card is expired, so any retry would fail forever. The customer must provide a new payment instrument; sending a one\u2011tap payment link now (within business hours) gives the highest conversion while minimizing opt\u2011out risk by limiting contact to a single, necessary message.\"}],\"case_summary\":\"Card\u2011expired mandate; need new card to recover the \u20b9762 payment.\"}"
+ },
+ "47aca32cadb207e203026804de8f28b4": {
+  "input_tokens": 1107,
+  "output_tokens": 871,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"OTP was entered incorrectly (customer error). Sending a one\u2011tap payment link after 09:00 gives the customer a quick way to retry with the correct OTP, maximizing conversion.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the payment is still not received after 24\u202fhours, a gentle reminder (no link) nudges the customer without pressure, respecting the medium risk and avoiding opt\u2011out risk.\"}],\"case_summary\":\"Customer entered an incorrect OTP, causing the card payment to fail; we need them to retry the payment.\"}"
  },
  "47db97033f1d357b1fc3cc5aa738a5ec": {
   "input_tokens": 940,
@@ -998,6 +1048,11 @@
   "input_tokens": 884,
   "output_tokens": 110,
   "text": "{\"plan\": [{\"action\": \"send_payment_link\", \"wait_days\": 0, \"hour_ist\": 10, \"reason\": \"The payment timed out due to a customer-side issue, and since salary day is tomorrow, sending a fresh payment link now gives them a clean opportunity to complete the transaction.\"}], \"case_summary\": \"A low-risk UPI payment of 385 rupees timed out due to customer-side failure, and a payment link is now sent as salary day arrives.\"}"
+ },
+ "4bc0f69acfc26c6e725e5c7de51bb305": {
+  "input_tokens": 1117,
+  "output_tokens": 564,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Customer reached payment page (high intent) but left; a one\u2011tap payment link now (within 09\u201121 IST) gives the easiest way to complete purchase before salary arrives tomorrow.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If payment not received after 24\u202fh (likely after salary credit), a gentle reminder nudges the customer without pressure, preserving the relationship.\"}],\"case_summary\":\"Abandoned checkout with high intent; customer\u2019s salary arrives tomorrow, making a payment link now followed by a reminder the next day the best recovery approach.\"}"
  },
  "4bf48ca534033414a937505aeeeb7ab0": {
   "input_tokens": 1160,
@@ -1204,6 +1259,11 @@
   "output_tokens": 570,
   "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Customer entered wrong OTP; a one\u2011tap payment link lets them retry instantly without pressure, suitable for repeat low\u2011risk buyer.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If no payment after first link, a gentle reminder the next day nudges the customer without being pushy.\"}],\"case_summary\":\"OTP entered incorrectly, payment failed; repeat low\u2011value customer.\"}"
  },
+ "58c122ffaea0d3e8c61515fa377d7c18": {
+  "input_tokens": 1118,
+  "output_tokens": 569,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"High intent abandoned checkout; a one\u2011tap payment link gives the easiest way to complete the purchase now before the end of the day.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"No payment after the first link and salary is expected tomorrow; a gentle reminder the next day nudges the customer without pressure.\"}],\"case_summary\":\"Customer abandoned checkout after reaching the payment page; high intent but payment not completed.\"}"
+ },
  "594e5f382c1d2ce798aca45292362174": {
   "input_tokens": 951,
   "output_tokens": 197,
@@ -1244,6 +1304,11 @@
   "output_tokens": 124,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"send_payment_link\",\n   \"wait_days\": 0,\n   \"hour_ist\": 10,\n   \"reason\": \"The mandate was revoked by the customer and retries will permanently fail, so we must provide a fresh payment link to re-establish the active subscription.\"\n  }\n ],\n \"case_summary\": \"A long-standing subscription auto-debit failed because the customer revoked their payment mandate, requiring a new payment link to collect the dues and restart the cycle.\"\n}"
  },
+ "5b2f6dd5d2d1aa6016ba8638bbd2147e": {
+  "input_tokens": 1131,
+  "output_tokens": 471,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"First-time customer showed high intent by reaching the payment page; a one\u2011tap payment link at a convenient hour maximises conversion for an abandoned checkout.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the link was not used, a gentle reminder the next day keeps the request visible without pressure, respecting the low\u2011risk profile and contact limits.\"}],\"case_summary\":\"Abandoned checkout by a first\u2011time, high\u2011intent customer who left before completing netbanking payment.\"}"
+ },
  "5b74d0696d132cec5b9ddc7a9d7a70e1": {
   "input_tokens": 882,
   "output_tokens": 102,
@@ -1263,6 +1328,11 @@
   "input_tokens": 936,
   "output_tokens": 110,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"schedule_retry\",\n   \"wait_days\": 0,\n   \"hour_ist\": 11,\n   \"reason\": \"The failure was a gateway technical error with a valid card, so a silent retry without contacting the repeat customer is appropriate.\"\n  }\n ],\n \"case_summary\": \"A low-risk repeat customer experienced a gateway technical error on a card payment, which can be resolved immediately via a silent retry.\"\n}"
+ },
+ "5f16d5679c6c64e5f09d85b0f29c16df": {
+  "input_tokens": 1159,
+  "output_tokens": 1078,
+  "text": "{\"plan\":[{\"action\":\"escalate_to_human\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Amount exceeds auto\u2011action ceiling and customer is first\u2011time B2B client; human must approve before any outreach.\"},{\"action\":\"schedule_retry\",\"wait_days\":2,\"hour_ist\":11,\"reason\":\"Salary will be credited tomorrow; waiting 2 days ensures funds are available before a silent retry, avoiding another immediate failure.\"},{\"action\":\"send_payment_link\",\"wait_days\":3,\"hour_ist\":11,\"reason\":\"If the silent retry after salary still fails, a one\u2011tap payment link gives the customer an easy way to settle the overdue invoice without pressure.\"}],\"case_summary\":\"High\u2011risk B2B invoice of \u20b97,762, first\u2011time customer, 39 days overdue, requires human approval before any recovery action.\"}"
  },
  "5f36185ae76f042d301217db99781272": {
   "input_tokens": 1140,
@@ -1348,6 +1418,11 @@
   "input_tokens": 1119,
   "output_tokens": 104,
   "text": "{\"plan\": [{\"action\": \"send_payment_link\", \"wait_days\": 0, \"hour_ist\": 10, \"reason\": \"The customer abandoned checkout 26 days ago and salary day is tomorrow, making this an ideal time to send a gentle payment link for a loyal repeat buyer.\"}], \"case_summary\": \"A loyal repeat customer abandoned checkout over three weeks ago, and with salary day tomorrow, a light-touch payment link has a high probability of converting.\"}"
+ },
+ "6a3a0bf285d5b85e6a15149f1479eeaa": {
+  "input_tokens": 1158,
+  "output_tokens": 785,
+  "text": "{\"plan\":[{\"action\":\"schedule_retry\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"Silent retry after the customer's salary is credited (1 day later); the card is still valid and the failure was due to insufficient funds, so a retry then has a high chance of success without bothering the customer.\"},{\"action\":\"send_payment_link\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the retry still fails, send a one\u2011tap payment link the next day to let the customer quickly settle the overdue subscription now that funds should be available, minimizing friction and preserving the relationship.\"}],\"case_summary\":\"Subscription auto-debit failed due to insufficient funds; salary arrives tomorrow.\"}"
  },
  "6a3d60e38a60cf20d8e12929e1f2bd28": {
   "input_tokens": 928,
@@ -1614,6 +1689,11 @@
   "output_tokens": 142,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"send_payment_link\",\n   \"wait_days\": 0,\n   \"hour_ist\": 10,\n   \"reason\": \"The customer abandoned checkout with a card payment method and salary day is tomorrow, making this the optimal window to send a direct one-tap payment link at 10:00 IST.\"\n  }\n ],\n \"case_summary\": \"A first-time low-risk customer abandoned checkout for a 493 rupees card payment over 500 hours ago and can now be reached with a payment link on the eve of salary day.\"\n}"
  },
+ "80ec9aac1ad6030b08853fc01a1dee8b": {
+  "input_tokens": 1129,
+  "output_tokens": 542,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"First-time customer showed high intent by reaching the payment page; a one\u2011tap UPI link is the most effective way to let them finish the checkout now before salary day passes.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the payment link didn't convert, a gentle reminder 24\u202fhours later nudges the customer without pressure, respecting the 09:00\u201121:00 window and keeping the relationship positive.\"}],\"case_summary\":\"Abandoned checkout by a first\u2011time, high\u2011intent customer using UPI; payment not completed and recoverable.\"}"
+ },
  "810d706f6ab5cd32a05871460781af32": {
   "input_tokens": 1117,
   "output_tokens": 833,
@@ -1623,6 +1703,11 @@
   "input_tokens": 957,
   "output_tokens": 149,
   "text": "{\"plan\": [{\"action\": \"escalate_to_human\", \"wait_days\": 0, \"hour_ist\": 10, \"reason\": \"Amount is above the Rs 5,000 auto-action ceiling requiring human approval before proceeding.\"}, {\"action\": \"send_reminder\", \"wait_days\": 1, \"hour_ist\": 10, \"reason\": \"Send a gentle B2B reminder since this is a repeat customer well past terms who responds better to a lighter touch.\"}], \"case_summary\": \"An overdue B2B invoice of Rs 8,341 for a repeat customer requires human approval due to the amount threshold before sending a polite reminder.\"}"
+ },
+ "8251e2601499887ad7cef7293803225a": {
+  "input_tokens": 1104,
+  "output_tokens": 443,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Customer left checkout without completing payment; a one\u2011tap payment link at 11\u202fIST gives the easiest way to finish the \u20b91,654 purchase before the next salary day.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the link is ignored, a gentle reminder 24\u202fhours later nudges the customer without pressure, increasing chance of payment after they have funds from salary.\"}],\"case_summary\":\"Customer abandoned checkout; payment not captured and no error source identified, so the issue is likely the customer did not finish the transaction.\"}"
  },
  "82fac79e28475abbc0ab8c00dfcd34db": {
   "input_tokens": 935,
@@ -1684,6 +1769,16 @@
   "output_tokens": 124,
   "text": "{\n  \"plan\": [\n    {\n      \"action\": \"send_payment_link\",\n      \"wait_days\": 1,\n      \"hour_ist\": 10,\n      \"reason\": \"Salary day arrives in 1 day, so waiting until then ensures the customer has sufficient funds to complete the payment via a fresh payment link.\"\n    }\n  ],\n  \"case_summary\": \"A first-time customer failed a card payment due to insufficient funds, but since salary day is tomorrow, sending a payment link at that time maximizes recovery.\"\n}"
  },
+ "897cb354f29d92a18d13dc14ea3ec2c1": {
+  "input_tokens": 1152,
+  "output_tokens": 705,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Customer reached checkout but left; a one\u2011tap payment link has the highest conversion for this high\u2011intent, first\u2011time buyer. Sending it today at 11:00\u202fIST respects contact windows and limits outreach to a single, low\u2011risk touch given prior contacts and opt\u2011out risk.\"}],\"case_summary\":\"First\u2011time customer abandoned checkout after reaching the payment page; low prior engagement but high intent, with salary arriving tomorrow.\"}"
+ },
+ "898dc3e961a19a6f949f74f3656fe619": {
+  "input_tokens": 1125,
+  "output_tokens": 966,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Customer error (incorrect OTP) requires them to re\u2011enter OTP; send a one\u2011tap payment link now to let them complete the payment before salary day.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"No response after first link; a light reminder the next day (after salary) nudges the repeat customer without pressure.\"},{\"action\":\"do_nothing\",\"wait_days\":0,\"hour_ist\":0,\"reason\":\"Low\u2011value, low\u2011risk case; after two gentle contacts further outreach risks opt\u2011out and offers little additional recovery chance.\"}],\"case_summary\":\"Failed payment of \u20b9807 due to incorrect OTP; repeat low\u2011risk customer, salary expected tomorrow.\"}"
+ },
  "8991c1dcec67358d2c3a26da6a5cf3ca": {
   "input_tokens": 927,
   "output_tokens": 114,
@@ -1733,6 +1828,11 @@
   "input_tokens": 914,
   "output_tokens": 111,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"schedule_retry\",\n   \"wait_days\": 0,\n   \"hour_ist\": 10,\n   \"reason\": \"The failure was caused by the bank being down with a valid instrument, so a silent retry is the appropriate first step.\"\n  }\n ],\n \"case_summary\": \"A low-risk small payment failed due to a bank outage with a valid card, and can be resolved immediately via a silent retry.\"\n}"
+ },
+ "8d0fbdf03ddb56340a69e7db71724f24": {
+  "input_tokens": 1169,
+  "output_tokens": 583,
+  "text": "{\"plan\":[{\"action\":\"schedule_retry\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"Silent retry after the customer's salary is credited (in 1 day) when the card is still valid; likely funds will be sufficient and this costs nothing.\"},{\"action\":\"send_payment_link\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the retry still fails, provide a one\u2011tap payment link the next day to let the customer manually settle the overdue subscription without pressure.\"}],\"case_summary\":\"Card payment declined for insufficient funds; salary arrives tomorrow, and the auto\u2011debit failed after 13 successful cycles.\"}"
  },
  "8d37aa5690315c2425c1c437eb322f36": {
   "input_tokens": 1166,
@@ -1868,6 +1968,11 @@
   "input_tokens": 1128,
   "output_tokens": 627,
   "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Customer showed high intent by reaching the payment page; a one\u2011tap payment link gives the easiest way to complete the purchase now.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"No payment after 24\u202fh; a gentle reminder after salary day increases chance of payment without pressure.\"}],\"case_summary\":\"First\u2011time customer abandoned checkout after reaching the payment page, with no known failure reason.\"}"
+ },
+ "991e20ea86840c3b10942574999ed099": {
+  "input_tokens": 1164,
+  "output_tokens": 606,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":13,\"reason\":\"Card is expired, so any retry will fail; the only way to collect is to ask the customer to provide a new card via a one\u2011tap payment link. Sending it immediately (within business hours) gives the highest conversion chance.\"},{\"action\":\"send_reminder\",\"wait_days\":2,\"hour_ist\":11,\"reason\":\"If the customer hasn't acted on the link after 48\u202fhours, a gentle reminder (without another link) nudges them without adding pressure, respecting the low\u2011risk, first\u2011time relationship.\"}],\"case_summary\":\"Card expired caused the subscription auto\u2011debit to fail; the customer must supply a new payment method to recover the amount.\"}"
  },
  "9920a92b342760cb4bbd3e855b469824": {
   "input_tokens": 1161,
@@ -2104,6 +2209,11 @@
   "output_tokens": 120,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"send_payment_link\",\n   \"wait_days\": 0,\n   \"hour_ist\": 10,\n   \"reason\": \"Since this is an abandoned checkout with UPI as the preferred method, sending a payment link at a standard morning hour provides a frictionless way for the customer to complete the purchase.\"\n  }\n ],\n \"case_summary\": \"The customer abandoned their checkout using UPI and has not been contacted previously, making a single direct payment link the ideal intervention.\"\n}"
  },
+ "a99be2f9fe2f4c2335b378636c492898": {
+  "input_tokens": 1117,
+  "output_tokens": 647,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":19,\"reason\":\"High intent abandoned checkout; sending a one\u2011tap payment link now (before 21:00) gives the easiest path to complete the purchase before salary arrives tomorrow, maximizing conversion without pressure.\"}],\"case_summary\":\"Customer abandoned checkout after reaching the payment page; high intent, low risk, salary arrives tomorrow.\"}"
+ },
  "aad7dc7bbaac834fd6170dd8225cf74c": {
   "input_tokens": 900,
   "output_tokens": 127,
@@ -2144,6 +2254,11 @@
   "output_tokens": 117,
   "text": "{\n  \"plan\": [\n    {\n      \"action\": \"send_payment_link\",\n      \"wait_days\": 0,\n      \"hour_ist\": 10,\n      \"reason\": \"The customer abandoned their checkout with high intent and prior purchases, making a direct payment link the best way to convert them now.\"\n    }\n  ],\n  \"case_summary\": \"A low-risk customer with prior purchases abandoned checkout on a card payment, and a direct payment link is sent to recover the sale.\"\n}"
  },
+ "ad09496c8531f9316ea31f20617aa6a0": {
+  "input_tokens": 1154,
+  "output_tokens": 640,
+  "text": "{\"plan\":[{\"action\":\"schedule_retry\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"Insufficient funds will likely be resolved after the salary is credited tomorrow; a silent retry then costs nothing and avoids annoying the customer.\"},{\"action\":\"send_payment_link\",\"wait_days\":2,\"hour_ist\":11,\"reason\":\"If the retry after salary day still fails, a one\u2011tap payment link the next day gives the customer an easy way to settle the balance without pressure.\"}],\"case_summary\":\"Payment failed due to insufficient funds; salary arrives in 1 day, so retry after salary then send a payment link if needed.\"}"
+ },
  "ade5f7e76d62bdbae6cacb8f0bb51b95": {
   "input_tokens": 936,
   "output_tokens": 186,
@@ -2179,6 +2294,11 @@
   "output_tokens": 1408,
   "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"Send a one-tap payment link timed with salary day in 1 day to allow this high-intent first-time customer to complete their abandoned card checkout.\"}],\"case_summary\":\"First-time customer abandoned a card checkout at the payment page 16 days ago, with salary day occurring in 1 day.\"}"
  },
+ "afb252f82051ad104e058ceb7a8da3c2": {
+  "input_tokens": 1106,
+  "output_tokens": 665,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":10,\"reason\":\"Customer abandoned a netbanking checkout; sending a one\u2011tap payment link early in the day gives them a quick way to finish payment before salary is credited tomorrow.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":10,\"reason\":\"If the payment is still pending after 24\u202fhours (likely after salary), a gentle reminder nudges the customer without pressure, increasing recovery chances.\"}],\"case_summary\":\"Customer abandoned a netbanking checkout for \u20b91,076; salary will be credited tomorrow.\"}"
+ },
  "afbd0455c8fd53b5ad78c5142672b961": {
   "input_tokens": 1145,
   "output_tokens": 456,
@@ -2198,6 +2318,11 @@
   "input_tokens": 1114,
   "output_tokens": 126,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"send_payment_link\",\n   \"wait_days\": 0,\n   \"hour_ist\": 10,\n   \"reason\": \"The customer showed high intent by reaching the payment page, and since salary day is tomorrow, sending a payment link now maximizes the chance of conversion.\"\n  }\n ],\n \"case_summary\": \"The customer abandoned checkout on a UPI payment of 1243 rupees, but high intent and upcoming salary day present a strong opportunity for recovery with a single payment link.\"\n}"
+ },
+ "b1c436c0e98063c8020ef7f01a0bdd95": {
+  "input_tokens": 1167,
+  "output_tokens": 557,
+  "text": "{\"plan\":[{\"action\":\"schedule_retry\",\"wait_days\":1,\"hour_ist\":10,\"reason\":\"Insufficient funds will likely be resolved after the salary credit tomorrow; a silent retry after 1 day avoids additional customer contact and maximizes chance of payment without risking opt\u2011out.\"}],\"case_summary\":\"Payment declined for insufficient funds; salary arrives in 1 day, and the customer has already been contacted three times recently.\"}"
  },
  "b2cd32f2708d94953fba0e49bef969e1": {
   "input_tokens": 897,
@@ -2234,6 +2359,11 @@
   "output_tokens": 112,
   "text": "{\n  \"plan\": [\n    {\n      \"action\": \"send_payment_link\",\n      \"wait_days\": 0,\n      \"hour_ist\": 11,\n      \"reason\": \"The customer abandoned checkout using netbanking and salary day is tomorrow, making this the optimal time to send a direct payment link.\"\n    }\n  ],\n  \"case_summary\": \"A first-time customer abandoned checkout for an amount of 1294 rupees just before salary day.\"\n}"
  },
+ "b5ab68bdaa4272cf91e90cba8f4e7841": {
+  "input_tokens": 1118,
+  "output_tokens": 763,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":1,\"hour_ist\":10,\"reason\":\"High intent abandoned checkout; sending a one\u2011tap UPI payment link the next morning (within allowed hours) gives the customer an easy way to complete before salary arrives.\"},{\"action\":\"send_reminder\",\"wait_days\":2,\"hour_ist\":10,\"reason\":\"If payment still not received after salary day, a gentle reminder (no link) nudges the customer without pressure.\"}],\"case_summary\":\"Customer abandoned UPI checkout despite high intent; payment not completed.\"}"
+ },
  "b5e41e344cb6d8c908dc600b610cae1d": {
   "input_tokens": 898,
   "output_tokens": 113,
@@ -2248,6 +2378,11 @@
   "input_tokens": 1141,
   "output_tokens": 144,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"send_payment_link\",\n   \"wait_days\": 0,\n   \"hour_ist\": 10,\n   \"reason\": \"Customer reached the payment page showing high intent, and since they have been contacted 3 times previously, this single carefully timed payment link during morning hours gives them an easy one-tap way to complete the checkout without high-pressure follow-ups.\"\n  }\n ],\n \"case_summary\": \"An abandoned checkout of 1503 rupees where the customer showed high intent by reaching the payment page, but care must be taken due to prior recovery contacts.\"\n}"
+ },
+ "b7c4b6ddd5ae06b136e69fad17b5bd68": {
+  "input_tokens": 1117,
+  "output_tokens": 551,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"High intent abandoned checkout; a one\u2011tap payment link gives the easiest way to complete purchase before their salary arrives tomorrow.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the link didn\u2019t convert, a gentle reminder the next day (post\u2011salary) nudges them without pressure and respects the 24\u2011hour gap.\"}],\"case_summary\":\"Customer abandoned checkout after reaching payment page; likely low funds now but salary arrives tomorrow, making a payment link followed by a reminder the best recovery path.\"}"
  },
  "b84ee173ab9036150beedecc92295786": {
   "input_tokens": 1147,
@@ -2343,6 +2478,11 @@
   "input_tokens": 883,
   "output_tokens": 128,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"send_payment_link\",\n   \"wait_days\": 0,\n   \"hour_ist\": 10,\n   \"reason\": \"The customer abandoned checkout using UPI, so sending a direct payment link with a fresh prompt at a standard morning hour is the best way to convert.\"\n  }\n ],\n \"case_summary\": \"The customer abandoned a low-risk UPI checkout a while ago, and since they are contactable with no prior recovery contacts, a single payment link is the ideal way to prompt completion.\"\n}"
+ },
+ "c0d1589f51030720abab3c31113e7955": {
+  "input_tokens": 1161,
+  "output_tokens": 857,
+  "text": "{\"plan\":[{\"action\":\"escalate_to_human\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Amount exceeds the Rs\u202f5,000 auto\u2011action ceiling; policy requires a human to approve any outreach for this overdue B2B invoice.\"},{\"action\":\"send_payment_link\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"After approval, send a one\u2011tap payment link when the customer\u2019s salary is expected tomorrow, maximizing chance of sufficient funds.\"},{\"action\":\"send_reminder\",\"wait_days\":2,\"hour_ist\":11,\"reason\":\"If payment is still pending, a gentle reminder (no link) provides a low\u2011pressure nudge appropriate for a B2B relationship.\"}],\"case_summary\":\"Overdue B2B invoice of Rs\u202f7,049, first\u2011time customer, needs human approval before any contact; salary expected tomorrow.\"}"
  },
  "c0da1d04daaf2bdace01fa8a22447c0e": {
   "input_tokens": 1116,
@@ -2443,6 +2583,11 @@
   "input_tokens": 883,
   "output_tokens": 119,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"send_payment_link\",\n   \"wait_days\": 0,\n   \"hour_ist\": 11,\n   \"reason\": \"The customer abandoned the checkout with a wallet payment method, so sending a direct payment link with a one-tap option provides the best conversion path.\"\n  }\n ],\n \"case_summary\": \"An abandoned low-risk checkout using a wallet for 1121 rupees where the customer is contactable and has one prior purchase.\"\n}"
+ },
+ "c8ec6c7eee77a6dceaf9d2dcc43e3b5e": {
+  "input_tokens": 1152,
+  "output_tokens": 578,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Card is expired, so the saved instrument will never succeed; sending a one\u2011tap payment link now (mid\u2011morning) gives the customer an easy way to update the card and clear the missed subscription payment.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the customer hasn\u2019t acted on the link after 24\u202fhours, a gentle reminder (without another link) nudges them without pressure, respecting the low\u2011risk, low\u2011value nature of the case.\"}],\"case_summary\":\"Subscription auto\u2011debit failed because the saved card expired; the customer must supply a new card to recover the payment.\"}"
  },
  "c97217d32c199620d6cae4926342c174": {
   "input_tokens": 1139,
@@ -2569,6 +2714,11 @@
   "output_tokens": 103,
   "text": "{\"plan\": [{\"action\": \"send_payment_link\", \"wait_days\": 0, \"hour_ist\": 10, \"reason\": \"The customer abandoned checkout on a low-risk, contactable card purchase, and timing the payment link for the morning right before salary day maximizes the conversion chance.\"}], \"case_summary\": \"An abandoned card checkout for 650 rupees by a low-risk customer with one prior purchase, ready for a timely payment link nudge.\"}"
  },
+ "d2ef301e74ce6a36c7e29c58019484b9": {
+  "input_tokens": 1128,
+  "output_tokens": 969,
+  "text": "{\"plan\":[{\"action\":\"schedule_retry\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"Silent retry after the customer's salary is expected tomorrow; funds likely available and no customer contact avoids opt\u2011out risk.\"},{\"action\":\"send_payment_link\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the retry still fails, a one\u2011tap payment link gives the customer an easy way to complete the checkout without further pressure, and this will be the only contact within the 7\u2011day window.\"}],\"case_summary\":\"Abandoned checkout via UPI, low amount, customer has been contacted twice before and is near salary day; aim to recover silently then offer a payment link if needed.\"}"
+ },
  "d35ca9d2ebfec3018c0c680b46e9258c": {
   "input_tokens": 896,
   "output_tokens": 121,
@@ -2588,6 +2738,11 @@
   "input_tokens": 1114,
   "output_tokens": 118,
   "text": "{\n \"plan\": [\n  {\n   \"action\": \"send_payment_link\",\n   \"wait_days\": 0,\n   \"hour_ist\": 10,\n   \"reason\": \"The customer showed high intent by reaching the payment page and has prior purchases, making a direct payment link sent during morning hours ideal to capture the sale.\"\n  }\n ],\n \"case_summary\": \"The customer abandoned checkout after reaching the payment page, and a single morning payment link is deployed to capitalize on their high prior intent.\"\n}"
+ },
+ "d507f22706ff5abd439982a753ab25fd": {
+  "input_tokens": 1128,
+  "output_tokens": 460,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"High intent abandoned checkout; customer left at payment page. A one\u2011tap link gives the easiest way to complete payment now.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the link is ignored, a gentle reminder the next day nudges the first\u2011time buyer without pressure, respecting low\u2011risk profile.\"}],\"case_summary\":\"First\u2011time customer abandoned checkout after reaching payment page; likely never submitted payment.\"}"
  },
  "d677f5d6ede03a74b9f78eda5e885e17": {
   "input_tokens": 885,
@@ -2699,6 +2854,11 @@
   "output_tokens": 136,
   "text": "{\n  \"plan\": [\n    {\n      \"action\": \"send_payment_link\",\n      \"wait_days\": 0,\n      \"hour_ist\": 11,\n      \"reason\": \"Customer is a loyal repeat buyer with high intent who reached the payment page; salary day is tomorrow so sending a one-tap link now minimizes pressure while maximizing conversion likelihood.\"\n    }\n  ],\n  \"case_summary\": \"A loyal repeat customer abandoned checkout for a low-risk, small-value purchase just before salary day, making a gentle payment link appropriate to capture the sale without risking opt-out.\"\n}"
  },
+ "ddb142946f5f1aad0455826ff3245e32": {
+  "input_tokens": 1159,
+  "output_tokens": 1200,
+  "text": "{\"plan\":[{\"action\":\"escalate_to_human\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Human approval is required before any outreach because the amount exceeds the auto\u2011action ceiling and the case is high\u2011risk, first\u2011time B2B customer.\"},{\"action\":\"schedule_retry\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"Silent retry after the customer's salary is likely credited tomorrow; the card is still valid and a retry is free and non\u2011annoying.\"}]}"
+ },
  "de3530f9bf4e407a64d7118f8672d520": {
   "input_tokens": 913,
   "output_tokens": 114,
@@ -2749,6 +2909,11 @@
   "output_tokens": 198,
   "text": "{\n  \"plan\": [\n    {\n      \"action\": \"escalate_to_human\",\n      \"wait_days\": 0,\n      \"hour_ist\": 11,\n      \"reason\": \"The amount exceeds the Rs 5000 auto-action ceiling and requires human review for this B2B invoice.\"\n    },\n    {\n      \"action\": \"send_payment_link\",\n      \"wait_days\": 1,\n      \"hour_ist\": 10,\n      \"reason\": \"Send a payment link via UPI just 1 day before salary day when liquidity is high to maximize conversion for this overdue B2B invoice.\"\n    }\n  ],\n  \"case_summary\": \"A first-time B2B customer has an overdue invoice of Rs 19,467 requiring human approval due to the high amount and high risk band.\"\n}"
  },
+ "e1db076c9aa122e120e14ebb5b78e506": {
+  "input_tokens": 1118,
+  "output_tokens": 929,
+  "text": "{\"plan\":[{\"action\":\"schedule_retry\",\"wait_days\":1,\"hour_ist\":10,\"reason\":\"Silent retry after the customer's salary is expected tomorrow, giving the UPI instrument a chance to have sufficient funds without bothering the customer.\"},{\"action\":\"send_payment_link\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the retry still fails, send a one\u2011tap payment link the next day to capitalize on the customer's high intent and make payment as easy as possible.\"}],\"case_summary\":\"Customer abandoned checkout after reaching the payment page; payment via UPI failed and salary arrives tomorrow.\"}"
+ },
  "e245b54ef43e75d2c81f8ea2ee075352": {
   "input_tokens": 935,
   "output_tokens": 123,
@@ -2769,6 +2934,11 @@
   "output_tokens": 498,
   "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"High intent abandoned checkout; a one\u2011tap payment link maximizes conversion and lets the customer complete the purchase now, especially with salary arriving tomorrow.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If payment not received after 24\u202fh, a gentle reminder nudges the customer without pressure, keeping the relationship positive.\"}],\"case_summary\":\"Customer abandoned checkout after reaching the payment page; low risk, high intent, and recoverable.\"}"
  },
+ "e3f8794dbadf7bfbb3ffbf6431f3d7f9": {
+  "input_tokens": 1159,
+  "output_tokens": 699,
+  "text": "{\"plan\":[{\"action\":\"escalate_to_human\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Amount exceeds auto\u2011action ceiling and risk is high; policy requires human approval before any customer\u2011facing step.\"},{\"action\":\"schedule_retry\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"Salary is credited tomorrow; a silent retry after funds arrive may succeed without bothering the customer.\"},{\"action\":\"send_payment_link\",\"wait_days\":2,\"hour_ist\":11,\"reason\":\"If the retry fails, a one\u2011tap payment link gives the customer a quick way to settle the overdue invoice with a new or updated card.\"}],\"case_summary\":\"High\u2011risk B2B invoice of \u20b98,131 overdue 11 days; needs human approval before contacting the first\u2011time customer.\"}"
+ },
  "e533d5350a3462cf043b339f6799eff7": {
   "input_tokens": 1141,
   "output_tokens": 1135,
@@ -2778,6 +2948,11 @@
   "input_tokens": 897,
   "output_tokens": 1060,
   "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":10,\"reason\":\"Send a direct payment link to allow the first-time customer to complete their abandoned checkout once business contact hours begin.\"},{\"action\":\"send_reminder\",\"wait_days\":2,\"hour_ist\":11,\"reason\":\"Follow up with a soft nudge after salary day in case the checkout was abandoned due to insufficient wallet funds.\"}],\"case_summary\":\"First-time customer abandoned a wallet checkout of \u20b92,246; sending a direct payment link followed by a reminder post-salary day.\"}"
+ },
+ "e5cbbde03c94ddc678e38b9f6cb15151": {
+  "input_tokens": 1118,
+  "output_tokens": 762,
+  "text": "{\"plan\":[{\"action\":\"send_payment_link\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"Customer reached the payment page (high intent) but left; a one\u2011tap payment link gives the easiest way to complete now, especially with salary arriving tomorrow.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":11,\"reason\":\"If the link didn\u2019t convert, a gentle reminder the next day nudges without pressure, respecting the 24\u2011hour gap and contact limits.\"}],\"case_summary\":\"Customer abandoned checkout after reaching the payment page; high intent but payment not completed.\"}"
  },
  "e64c9e27ab2ab60ac77848fd2c6dca31": {
   "input_tokens": 940,
@@ -3023,6 +3198,11 @@
   "input_tokens": 883,
   "output_tokens": 123,
   "text": "{\n  \"plan\": [\n    {\n      \"action\": \"send_payment_link\",\n      \"wait_days\": 0,\n      \"hour_ist\": 11,\n      \"reason\": \"Since the checkout was abandoned with no payment method error, sending a direct payment link with netbanking option at 11 AM maximizes the chance of conversion.\"\n    }\n  ],\n  \"case_summary\": \"An abandoned checkout of 701 rupees using netbanking with a low risk profile and zero prior contacts needs a single payment link.\"\n}"
+ },
+ "f9e596af1c656130496904b7b35f9947": {
+  "input_tokens": 1143,
+  "output_tokens": 644,
+  "text": "{\"plan\":[{\"action\":\"do_nothing\",\"wait_days\":0,\"hour_ist\":11,\"reason\":\"The customer has already been contacted three times in the past 90 days, and further outreach carries a real risk of opt\u2011out. They showed high intent by reaching the payment page, but netbanking requires active user action, so a silent retry won\u2019t help. Given the imminent salary day and low risk band, the safest approach is to avoid additional contact and let the customer complete payment on their own.\"}],\"case_summary\":\"Customer abandoned a netbanking checkout after reaching the payment page; already contacted three times, so further contact risks opt\u2011out.\"}"
  },
  "fa0c438d79550a52ec5606d01bc1b784": {
   "input_tokens": 1141,

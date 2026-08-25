@@ -61,6 +61,10 @@ class RunResult:
     unknown_actions: int = 0
     escalated_to_queue: int = 0
     doer_failures: int = 0
+    # Cases closed to further contact because they used up all four attempts.
+    # Razorpay asked for stopping rules by name, and a stopping rule that never
+    # fires is indistinguishable from one that does not exist.
+    stopped_by_rule: int = 0
 
     @property
     def violations(self) -> dict[str, int]:
@@ -121,6 +125,15 @@ def run_policy(
 
     for signal in signals:
         case = cases_by_id[signal.case_id]
+
+        # Seed the Guard with what previous runs already did to this case. The
+        # stopping rule counts a case's lifetime attempts; without this it only
+        # ever counted the current plan, and since `parse_plan` already caps a
+        # plan at four actions, the rule could never fire at all -- two
+        # mechanisms enforcing the same limit, the outer one silently making the
+        # inner one unreachable. It read as defence in depth and was dead code.
+        if signal.attempts_so_far:
+            state.attempts_per_case[signal.case_id] = signal.attempts_so_far
 
         plan, meta = _plan_for(policy, signal, result)
         result.proposed += sum(1 for a in plan if a.kind != "do_nothing")
@@ -184,6 +197,7 @@ def run_policy(
 
     result.guard_hits = dict(state.blocks)
     result.escalated_to_queue = len(doer.queue)
+    result.stopped_by_rule = len(state.stopped_cases)
 
     if audit and audit_rows:
         ledger.record_many(session, audit_rows)
@@ -204,6 +218,7 @@ def run_policy(
             "llm_calls": result.llm_calls,
             "llm_cost_paise": result.llm_cost_paise,
             "escalated_to_queue": result.escalated_to_queue,
+            "stopped_by_rule": result.stopped_by_rule,
             "doer_failures": result.doer_failures,
         },
     )

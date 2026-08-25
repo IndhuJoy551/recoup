@@ -30,7 +30,6 @@ from app.db import SessionLocal, init_db
 from app.doer import Doer
 from app.guard import GuardState, check
 from app.models import Case
-from app.policies import plan_rules_only
 from app.thinker import Thinker
 
 RULE = "-" * 78

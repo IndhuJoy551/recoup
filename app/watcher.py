@@ -80,6 +80,9 @@ class Signal:
     prior_contacts_90d: int = 0
     age_hours: float = 0.0
     detected_hour_ist: int = 10
+    # Attempts already made on THIS case in previous runs. The stopping rule is
+    # about a case's whole life, not about one day's plan.
+    attempts_so_far: int = 0
     days_to_salary_day: int = 1
 
     facts: list[str] = field(default_factory=list)
@@ -101,6 +104,8 @@ class Signal:
             "prior_purchases": self.prior_purchases,
             "recovery_contacts_last_90d": self.prior_contacts_90d,
             "hours_since_detected": round(self.age_hours, 1),
+            **({"attempts_already_made": self.attempts_so_far}
+               if self.attempts_so_far else {}),
             "detected_at_hour_ist": self.detected_hour_ist,
             "days_until_next_salary_day": self.days_to_salary_day,
             "facts": self.facts,
@@ -272,6 +277,7 @@ def assess(case: Case, *, as_of: dt.datetime) -> Signal:
         prior_contacts_90d=prior_contacts,
         age_hours=age_hours,
         detected_hour_ist=detected_hour_ist,
+        attempts_so_far=int(case.attempts or 0),
         days_to_salary_day=days_to_salary,
         facts=facts,
     )

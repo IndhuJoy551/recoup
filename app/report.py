@@ -25,6 +25,7 @@ which is the only component that reads `CaseTruth`.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 from app.models import Case, CaseTruth
@@ -53,8 +54,6 @@ def describe_cohort(rows: list[tuple[Case, CaseTruth]]) -> Cohortwide:
     winnable = [(c, t) for c, t in rows if t.recoverable and not t.would_pay_unprompted]
     unwinnable = [(c, t) for c, t in rows if not t.recoverable]
     self_paying = [(c, t) for c, t in rows if t.would_pay_unprompted]
-
-    import json
 
     return Cohortwide(
         cases=len(rows),
@@ -117,6 +116,8 @@ def score(result: RunResult, world: Cohortwide) -> dict:
         "wasted_contacts": len(wasted),
         "opt_outs": len(opt_outs),
         "correctly_left_alone": len(left_alone),
+        "stopped_by_rule": result.stopped_by_rule,
+        "escalated_to_queue": result.escalated_to_queue,
 
         # --- efficiency ----------------------------------------------------
         "contacts_per_1000_caused": _per(contacts, caused, 100_000),
@@ -224,7 +225,7 @@ def render(card: dict) -> str:
 
     header2 = (
         f"{'policy':<22}{'msgs/Rs1000':>14}{'cost % of':>12}{'blocked':>10}"
-        f"{'violations':>13}{'left alone':>13}"
+        f"{'violations':>13}{'left alone':>13}{'stopped':>10}"
     )
     add(header2)
     add("-" * len(header2))
@@ -238,6 +239,7 @@ def render(card: dict) -> str:
             f"{row['blocked_total']:>10}"
             f"{row['violations_total']:>13}"
             f"{row['correctly_left_alone']:>13}"
+            f"{row['stopped_by_rule']:>10}"
         )
     add("")
 
@@ -252,6 +254,19 @@ def render(card: dict) -> str:
     add("  cost % of   = what the policy spent (messages + staff time) as a")
     add("                share of the money it actually caused to arrive.")
     add("  left alone  = unwinnable cases correctly not chased.")
+    add("  stopped     = cases closed for good by the 4-attempt stopping rule.")
+    if all(row["stopped_by_rule"] == 0 for row in card["policies"]):
+        add("")
+        add("  Note: `stopped` is 0 in every row, and that is a property of the")
+        add("  cohort rather than a missing feature. Every case here is new -- one")
+        add("  month, no prior recovery history -- and a single plan is capped at")
+        add("  four actions by the parser, so the fourth attempt is the last one")
+        add("  anybody proposes. The rule counts a case's lifetime attempts and")
+        add("  fires the moment a case arrives having been chased before; that is")
+        add("  what tests/test_guard.py::test_the_stopping_rule_counts_a_cases_")
+        add("  whole_life_not_one_plan checks. Reporting a rule as 'active' when")
+        add("  nothing in the run could ever trigger it would be the dishonest")
+        add("  version of this line.")
     return "\n".join(lines)
 
 

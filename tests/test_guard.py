@@ -214,3 +214,36 @@ def test_consent_is_checked_before_anything_else(state):
     signal = make_signal(opted_out=True, needs_human=True, amount_paise=900_000)
     verdict = guard.check(signal, Action("send_reminder", hour_ist=3), state, as_of=AS_OF)
     assert verdict.rule == "customer_opted_out"
+
+
+def test_the_stopping_rule_counts_a_cases_whole_life_not_one_plan(state):
+    """A case that arrives having already been chased four times is closed.
+
+    This is the only way the stopping rule can ever fire. A single plan is capped
+    at four actions by the parser, so if the rule only counted the current plan
+    it could never trigger -- which is exactly what it did until the report card
+    showed `stopped: 0` in every row. A rule that cannot fire is not defence in
+    depth, it is decoration.
+    """
+    signal = make_signal(attempts_so_far=guard.MAX_ATTEMPTS_PER_CASE)
+    state.attempts_per_case[signal.case_id] = signal.attempts_so_far
+
+    verdict = guard.check(
+        signal, Action("send_reminder", wait_days=1, hour_ist=11), state, as_of=AS_OF
+    )
+    assert not verdict.allowed
+    assert verdict.rule == "stopping_rule"
+
+
+def test_a_case_chased_three_times_before_gets_exactly_one_more(state):
+    signal = make_signal(attempts_so_far=guard.MAX_ATTEMPTS_PER_CASE - 1)
+    state.attempts_per_case[signal.case_id] = signal.attempts_so_far
+
+    last = Action("send_reminder", wait_days=1, hour_ist=11)
+    assert guard.check(signal, last, state, as_of=AS_OF).allowed
+    state.commit(signal, last, last.scheduled_at(AS_OF))
+
+    after = guard.check(
+        signal, Action("send_payment_link", wait_days=3, hour_ist=11), state, as_of=AS_OF
+    )
+    assert not after.allowed and after.rule == "stopping_rule"

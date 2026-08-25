@@ -12,6 +12,34 @@ Format for each entry:
 
 ---
 
+## The answer for the form
+
+*Razorpay's application asks "what broke, and how you got out", and says it is the field they
+read first. This is the ~200 words. The full entries are below.*
+
+> The worst one didn't look like a failure at all. I was testing the LLM planner on four cases
+> and every plan came back sensible — a silent retry for the bank outage, wait-for-salary-day for
+> the insufficient-funds decline, escalation for the merchant-side one. The only thing wrong on
+> the screen was `cost_paise: 0`.
+>
+> Two failures had stacked. The model name I'd hardcoded had been retired for new API keys, so
+> every call was returning 404. And my "graceful degradation" caught it, fell back to my
+> hand-written rules, and carried on. The good plans I was admiring were my own rules, wearing
+> the model's label.
+>
+> Scaled to 300 cases that would have produced an ablation table where "AI on" and "AI off" were
+> the same code, printing a confident dead heat, fully reproducible and completely false. I'd
+> have published it.
+>
+> The fix was three things: make the total-outage case *raise* instead of degrade, because a
+> 100% failure is not a degraded run; count every fallback and print it in the report; and treat
+> "what does this look like when it's completely broken?" as a required question for every
+> fallback path, not just "what if one call fails?"
+>
+> A fallback nobody counts isn't a fallback. It's a cover-up.
+
+---
+
 ## 2026-08-24 — No credit card, so no Anthropic API key. The whole AI layer was blocked on day zero.
 
 **Symptom:** I couldn't get an API key for the planning model. The Anthropic console won't issue
@@ -298,3 +326,31 @@ application code, and they are not — they run with the same credentials agains
 The fix was three lines and the risk was the entire dataset. Test isolation is not hygiene, it is
 a blast radius decision, and `conftest.py` had got this right on day one purely because pytest
 made the right thing easy. Nothing made it easy in a script, so I did the wrong thing.
+
+## 2026-08-25 — A guardrail that could never fire, and I only noticed because I printed it
+
+**Symptom:** Added a `stopped` column to the report card — cases closed for good by the
+four-attempt stopping rule. It read `0` for all six policies. Not "low". Zero, everywhere.
+
+**Why:** Two mechanisms were enforcing the same limit and the outer one made the inner one
+unreachable. `actions.parse_plan()` refuses a plan longer than four actions, and the Guard's
+stopping rule blocks the *fifth* attempt on a case. Since no plan could ever contain a fifth
+action, the rule had nothing left to block. It had looked like defence in depth for two days.
+It was dead code with a test that passed because the test drove `GuardState` directly rather
+than going through a run.
+
+**Fix:** The stopping rule is about a case's **lifetime**, not one day's plan — "we have chased
+this person four times, ever, stop" — so `GuardState.attempts_per_case` is now seeded from
+`Case.attempts`, the count persisted from previous runs. Two new tests drive it the way a real
+run would: a case arriving with four prior attempts is refused, and a case with three gets
+exactly one more and then closes.
+
+It still reports 0 on this cohort, because every case in it is new. So the report card now
+*says* that, and says why, instead of printing a zero that looks like a working rule.
+
+**What it taught me:** I found this only because I put a column on a report nobody asked for.
+Every unit test for the stopping rule passed the whole time — they set up the state by hand,
+which meant they were testing the rule's logic and not its reachability. **A test that
+constructs the state directly can prove a rule works and still tell you nothing about whether
+anything can reach it.** For guardrails specifically, "does it fire on a real run?" is a
+different question from "does it fire when I make it fire", and only the first one matters.
