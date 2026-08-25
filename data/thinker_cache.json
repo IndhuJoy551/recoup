@@ -1919,6 +1919,11 @@
   "output_tokens": 100,
   "text": "{\"plan\": [{\"action\": \"send_payment_link\", \"wait_days\": 0, \"hour_ist\": 10, \"reason\": \"The saved card has expired and retries will continuously fail, so sending a payment link is necessary for the customer to provide a fresh instrument.\"}], \"case_summary\": \"An auto-debit subscription payment failed because the card expired after 13 successful cycles, requiring a payment link to be sent to the customer.\"}"
  },
+ "947984b3e221eb86566c652f5d52b6ea": {
+  "input_tokens": 1148,
+  "output_tokens": 934,
+  "text": "{\"plan\":[{\"action\":\"escalate_to_human\",\"wait_days\":0,\"hour_ist\":10,\"reason\":\"Invoice exceeds auto\u2011action ceiling and needs human sign\u2011off before any customer contact.\"},{\"action\":\"send_reminder\",\"wait_days\":1,\"hour_ist\":10,\"reason\":\"After approval, a light nudge respects the B2B approval queue and avoids pressure while the customer may still be processing internally.\"},{\"action\":\"schedule_retry\",\"wait_days\":1,\"hour_ist\":10,\"reason\":\"Silently retry the UPI charge after the reminder; the failure may be due to a temporary bank/outage issue or pending salary funds.\"},{\"action\":\"send_payment_link\",\"wait_days\":1,\"hour_ist\":10,\"reason\":\"If the silent retry still fails, provide a one\u2011tap payment link to let the customer settle the overdue amount quickly without further friction.\"}],\"case_summary\":\"B2B invoice of Rs\u202f8,173 overdue 66 days, requires human approval before outreach.\"}"
+ },
  "94bcc15eb7cc6b0bac773667cfef8b9c": {
   "input_tokens": 899,
   "output_tokens": 120,

@@ -196,7 +196,7 @@ def test_a_total_outage_raises_instead_of_quietly_becoming_the_rules(brain, monk
     use_fake_model(monkeypatch, brain, always_fail)
 
     with pytest.raises(LLMUnavailable, match="Refusing to publish"):
-        brain.prewarm(signals, workers=2, progress=False)
+        brain.prewarm(signals, workers=2, progress=False, pace_seconds=0)
 
 
 def test_a_partial_outage_does_not_raise(brain, monkeypatch):
@@ -215,7 +215,7 @@ def test_a_partial_outage_does_not_raise(brain, monkeypatch):
 
     use_fake_model(monkeypatch, brain, flaky)
 
-    stats = brain.prewarm(signals, workers=1, progress=False)
+    stats = brain.prewarm(signals, workers=1, progress=False, pace_seconds=0)
     assert 0 < stats["errors"] < stats["requested"]
 
 
@@ -277,3 +277,34 @@ def test_without_a_header_it_falls_back_to_exponential_backoff():
     first = thinker._rate_limit_wait(Response(), attempt=1)
     fourth = thinker._rate_limit_wait(Response(), attempt=4)
     assert fourth > first
+
+
+def test_the_pacer_spaces_calls_out_across_threads():
+    """Client-side pacing, so the batch stops discovering the limit by hitting it.
+
+    Three workers racing an 8,000-token-per-minute budget produced a steady
+    stream of 429s, each costing a full reset window. The arithmetic was
+    available up front.
+    """
+    import time as clock
+    from concurrent.futures import ThreadPoolExecutor
+
+    pacer = thinker.Pacer(interval=0.05)
+    starts: list[float] = []
+
+    def go(_):
+        pacer.wait()
+        starts.append(clock.monotonic())
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        list(pool.map(go, range(6)))
+
+    starts.sort()
+    gaps = [b - a for a, b in zip(starts, starts[1:])]
+    assert all(g >= 0.04 for g in gaps), gaps
+    assert len(starts) == 6, "pacing must not drop work, only delay it"
+
+
+def test_pacing_is_off_unless_a_batch_asked_for_it(brain, signal, monkeypatch):
+    """A single interactive call -- the live demo -- should not sit on a timer."""
+    assert brain.pacer is None

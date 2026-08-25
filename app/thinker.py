@@ -117,6 +117,40 @@ def rates_for(model: str) -> tuple[float, float]:
 TIMEOUT_SECONDS = 120.0
 MAX_WORKERS = 3
 
+# Client-side pacing, so the batch stops discovering the rate limit by hitting it.
+# The free tier here allows 8,000 tokens a minute and a planning call measures
+# ~1,230 tokens (1,105 in, 128 out, from the cache), which is about six and a half
+# calls a minute. Three workers racing produced a steady stream of 429s, each one
+# costing a full reset window; spacing the calls out instead means the retry path
+# is for genuine failures rather than for arithmetic anyone could have done up
+# front. Raise the budget when the account does.
+TOKENS_PER_MINUTE = 8_000
+EST_TOKENS_PER_CALL = 1_300
+
+
+class Pacer:
+    """Lets one call start every `interval` seconds, across all worker threads."""
+
+    def __init__(self, interval: float) -> None:
+        self.interval = interval
+        self._lock = threading.Lock()
+        self._next_at = 0.0
+
+    def wait(self) -> None:
+        if self.interval <= 0:
+            return
+        with self._lock:
+            now = time.monotonic()
+            start_at = max(now, self._next_at)
+            self._next_at = start_at + self.interval
+        delay = start_at - now
+        if delay > 0:
+            time.sleep(delay)
+
+
+def default_interval() -> float:
+    return 60.0 / max(1.0, TOKENS_PER_MINUTE / EST_TOKENS_PER_CALL)
+
 
 SYSTEM_PROMPT = f"""\
 You plan revenue-recovery actions for an Indian business that uses Razorpay.
@@ -451,6 +485,7 @@ class Thinker:
     offline: bool = False            # cache-only; never opens a socket
     last_call: dict = field(default_factory=dict)
 
+    pacer: Pacer | None = None
     calls: int = 0
     cache_hits: int = 0
     fallbacks: int = 0
@@ -498,6 +533,9 @@ class Thinker:
                    else settings.groq_api_key)
         if not api_key:
             raise LLMUnavailable(f"no API key configured for provider {provider!r}")
+
+        if self.pacer is not None:
+            self.pacer.wait()
 
         call = _call_gemini if provider == "gemini" else _call_groq
         reply = call(
@@ -563,7 +601,7 @@ class Thinker:
     # -------------------------------------------------------------- warm-up
 
     def prewarm(self, signals: list[Signal], *, workers: int = MAX_WORKERS,
-                progress: bool = True) -> dict:
+                progress: bool = True, pace_seconds: float | None = None) -> dict:
         """Fill the cache concurrently before the sequential run.
 
         The runner walks cases one at a time on purpose -- the Guard is stateful,
@@ -581,6 +619,10 @@ class Thinker:
         if not missing or self.offline:
             return {"requested": 0, "cached_already": len(signals) - len(missing)}
 
+        previous_pacer = self.pacer
+        interval = default_interval() if pace_seconds is None else pace_seconds
+        self.pacer = self.pacer or Pacer(interval)
+
         errors: list[str] = []
         done = 0
         lock = threading.Lock()
@@ -594,15 +636,18 @@ class Thinker:
                     errors.append(f"{signal.case_id}: {type(exc).__name__}")
             with lock:
                 done += 1
-                if done % 25 == 0:
+                if done % 10 == 0:
                     # Checkpoint. A batch that dies at case 280 should not throw
                     # away 279 paid-for answers.
                     self.cache.flush()
                     if progress:
                         print(f"  thinker: {done}/{len(missing)} planned", flush=True)
 
-        with ThreadPoolExecutor(max_workers=workers) as pool:
-            list(pool.map(fetch, missing))
+        try:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                list(pool.map(fetch, missing))
+        finally:
+            self.pacer = previous_pacer
 
         self.cache.flush()
 

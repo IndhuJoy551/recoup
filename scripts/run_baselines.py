@@ -48,6 +48,7 @@ def main(argv: list[str] | None = None) -> int:
     card = report.build(results, rows)
     print(report.render(card))
     print(report.render_rule_breakdown(card))
+    print(report.render_verdict(card))
 
     if args.json:
         with open(args.json, "w", encoding="utf-8") as handle:

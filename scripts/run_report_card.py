@@ -3,7 +3,7 @@
     python -m scripts.run_report_card                 (uses the committed cache)
     python -m scripts.run_report_card --live          (calls the model for anything
                                                        not already cached)
-    python -m scripts.run_report_card --model gemini-2.5-flash-lite
+    python -m scripts.run_report_card --model gemini-3.5-flash-lite
 
 Writes `results/report_card.json` and `results/RESULTS.md`, and prints both the
 comparison table and the ablation verdict.
@@ -86,6 +86,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(report.render(card))
     print(report.render_rule_breakdown(card))
+    print(report.render_verdict(card))
     print(report.render_ablation(card))
 
     print()
@@ -134,6 +135,12 @@ because a merchant blasting their customer list does not have a compliance layer
 - that is what makes it a bad idea. `blast_everyone_gated` is the same strategy
 with Recoup's Guard switched on, so the effect of *targeting* can be separated
 from the effect of *compliance*.
+
+## What the table says
+
+```
+{report.render_verdict(card)}
+```
 
 ## Ablation
 

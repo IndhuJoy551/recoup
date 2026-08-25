@@ -374,3 +374,97 @@ def to_markdown(card: dict) -> str:
         f"{rupees(world['unwinnable_paise'])} cannot be recovered by anyone."
     )
     return "\n".join(out)
+
+
+def render_verdict(card: dict) -> str:
+    """Say plainly what the table says, including where we lose.
+
+    Without this, a reader glancing at the numbers sees `blast_everyone` with the
+    largest `caused` column and stops there. That reading is not wrong, it is
+    incomplete, and leaving it incomplete would be a quiet way of hiding the
+    trade-off behind a table nobody finishes. So the trade-off is stated in
+    sentences, computed from the same numbers, and it names whichever policy
+    actually won each axis -- including when that is not ours.
+    """
+    rows = {r["policy"]: r for r in card["policies"]}
+    scoring = [r for r in card["policies"] if r["caused_paise"] > 0]
+    if not scoring:
+        return ""
+
+    by_money = max(scoring, key=lambda r: r["caused_paise"])
+
+    # Only policies that actually message people can be ranked on messages per
+    # rupee; for a silent policy the ratio is zero and means nothing. Written
+    # with an explicit None check because `x or default` treats a legitimate 0.0
+    # as missing -- which made `retry_everything`, the one policy that sends no
+    # messages at all, sort as the *least* efficient.
+    talkers = [r for r in scoring if r["contacts"] > 0
+               and r["contacts_per_1000_caused"] is not None]
+    by_efficiency = (min(talkers, key=lambda r: r["contacts_per_1000_caused"])
+                     if talkers else None)
+    silent = [r for r in scoring if r["contacts"] == 0]
+    world = card["cohort"]
+
+    lines = ["", "=" * 96, "WHAT THIS TABLE SAYS", "=" * 96, ""]
+
+    lines.append(
+        f"  Most money caused:  {by_money['policy']} at {rupees(by_money['caused_paise'])} "
+        f"({by_money['share_of_winnable'] * 100:.1f}% of winnable)."
+    )
+    if by_money["opt_outs"] or by_money["violations_total"]:
+        lines.append(
+            f"                      It cost {by_money['opt_outs']} customers lost permanently, "
+            f"{by_money['false_interventions']} people chased who were already paying,"
+        )
+        lines.append(
+            f"                      and {by_money['violations_total']} broken compliance rules."
+        )
+    lines.append("")
+    if by_efficiency:
+        lines.append(
+            f"  Fewest messages:    {by_efficiency['policy']} at "
+            f"{by_efficiency['contacts_per_1000_caused']:.2f} messages per Rs 1000 caused, "
+            f"{by_efficiency['opt_outs']} opt-outs,"
+        )
+        lines.append(
+            f"                      for {rupees(by_efficiency['caused_paise'])} "
+            f"({by_efficiency['share_of_winnable'] * 100:.1f}% of winnable)."
+        )
+    for row in silent:
+        lines.append("")
+        lines.append(
+            f"  Bothered nobody:    {row['policy']} caused "
+            f"{rupees(row['caused_paise'])} without contacting a single customer"
+        )
+        lines.append(
+            "                      -- no messages, no opt-outs, no goodwill spent. "
+            "It is ranked separately"
+        )
+        lines.append(
+            "                      because messages-per-rupee is undefined at zero "
+            "messages, not because"
+        )
+        lines.append("                      it did badly.")
+    lines.append("")
+
+    nothing = rows.get("do_nothing")
+    if nothing:
+        lines.append(
+            f"  The control:        doing nothing collects "
+            f"{rupees(nothing['collected_paise'])} and causes nothing at all. Any tool"
+        )
+        lines.append(
+            "                      measured on 'recovered' rather than 'caused' would "
+            "report that as a win."
+        )
+        lines.append("")
+
+    lines.append(
+        f"  Nobody's to win:    {rupees(world['unwinnable_paise'])} across "
+        f"{world['unwinnable_cases']} merchant-side declines. The policies that"
+    )
+    lines.append(
+        "                      leave those alone are correct, and it costs them "
+        "rupees in this table."
+    )
+    return "\n".join(lines)
