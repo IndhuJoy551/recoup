@@ -10,6 +10,7 @@ afterwards is offline, instant, and byte-identical.
 
 from __future__ import annotations
 
+import os
 import sys
 import time
 
@@ -19,7 +20,14 @@ from app import cohort, thinker, watcher
 def main() -> int:
     rows = cohort.build_cohort()
     signals = watcher.scan([case for case, _ in rows], as_of=cohort.AS_OF)
-    brain = thinker.Thinker(offline=False)
+    # Honour RECOUP_MODEL the same way make_recoup_policy() does. These two
+    # disagreeing is how you warm one model's cache and score another's, which
+    # looks exactly like a model that never answers.
+    brain = thinker.Thinker(
+        model=os.environ.get("RECOUP_MODEL", thinker.DEFAULT_MODEL),
+        offline=False,
+    )
+    print(f"planner: {brain.model}", flush=True)
 
     def key(signal):
         return brain.cache.key(brain.model, brain.prompt_for(signal), thinker.SYSTEM_PROMPT)
@@ -32,9 +40,15 @@ def main() -> int:
             return 0
         print(f"round {attempt}: {len(missing)} still to plan", flush=True)
         try:
-            brain.prewarm(signals, workers=3, progress=False)
+            stats = brain.prewarm(signals, workers=3, progress=True)
+            # prewarm collects why each call failed and this loop used to drop it,
+            # so a round that failed 38 out of 38 looked identical to a slow one.
+            # A retry loop that cannot say what it is retrying against is a
+            # spin loop with extra steps.
+            for line in stats.get("first_errors", []):
+                print(f"    ! {line}", flush=True)
         except Exception as exc:                      # noqa: BLE001
-            print(f"  {type(exc).__name__}: {str(exc)[:120]}", flush=True)
+            print(f"  {type(exc).__name__}: {str(exc)[:200]}", flush=True)
         time.sleep(4)
 
     brain.close()

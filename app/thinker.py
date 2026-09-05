@@ -124,7 +124,12 @@ MAX_WORKERS = 3
 # costing a full reset window; spacing the calls out instead means the retry path
 # is for genuine failures rather than for arithmetic anyone could have done up
 # front. Raise the budget when the account does.
-TOKENS_PER_MINUTE = 8_000
+TOKENS_PER_MINUTE = 8_000                       # Groq free tier
+
+# Gemini's free tier is metered per request per minute rather than per token, so
+# the budget that matters is a different one. Pacing is therefore per provider:
+# reusing Groq's arithmetic here would idle at 13s a call for no reason.
+GEMINI_REQUESTS_PER_MINUTE = 16
 
 # `max_tokens` is a RESERVATION against the rate limit, not a cap on what you are
 # charged. A 429 spelled it out: "Requested 2348" for a call whose prompt is
@@ -133,6 +138,17 @@ TOKENS_PER_MINUTE = 8_000
 # request's rate-limit cost bought tokens that were never generated. A three-step
 # plan with reasons has never exceeded ~350.
 MAX_OUTPUT_TOKENS = 600
+
+# Gemini 3.x thinks before it answers, and `maxOutputTokens` is one budget shared
+# between the thinking and the answer -- not a cap on the answer alone. At 600 the
+# model spent 573 tokens reasoning, had 27 left, and returned JSON cut off
+# mid-string. Every plan. `thinkingConfig.thinkingBudget = 0` is rejected outright
+# by this model, so the only lever is headroom: observed thinking runs to ~1,040
+# tokens and a plan is ~100, so 3,000 leaves roughly a 2x margin. Gemini bills
+# tokens produced rather than tokens reserved, so unused headroom is free here --
+# which is exactly the opposite of the Groq case above, and the reason this is a
+# per-provider number instead of one constant.
+GEMINI_MAX_OUTPUT_TOKENS = 3_000
 
 # Prompt + reservation, which is what the limiter actually counts.
 EST_TOKENS_PER_CALL = 1_750
@@ -158,7 +174,10 @@ class Pacer:
             time.sleep(delay)
 
 
-def default_interval() -> float:
+def default_interval(model: str = DEFAULT_MODEL) -> float:
+    """Seconds between calls, from whichever budget the provider actually meters."""
+    if provider_for(model) == "gemini":
+        return 60.0 / GEMINI_REQUESTS_PER_MINUTE
     return 60.0 / max(1.0, TOKENS_PER_MINUTE / EST_TOKENS_PER_CALL)
 
 
@@ -410,6 +429,11 @@ def _call_groq(prompt: str, *, model: str, api_key: str, client: httpx.Client,
     if not choices:
         raise LLMUnavailable(f"{model} returned no choices")
 
+    if choices[0].get("finish_reason") == "length":
+        raise LLMUnavailable(
+            f"{model} hit max_tokens; the answer is truncated, not an answer"
+        )
+
     text = (choices[0].get("message", {}).get("content") or "").strip()
     if not text:
         raise LLMUnavailable(f"{model} returned an empty answer")
@@ -443,7 +467,7 @@ def _call_gemini(prompt: str, *, model: str, api_key: str, client: httpx.Client,
                 "temperature": 0.0,
                 "responseMimeType": "application/json",
                 "responseSchema": RESPONSE_SCHEMA,
-                "maxOutputTokens": MAX_OUTPUT_TOKENS,
+                "maxOutputTokens": GEMINI_MAX_OUTPUT_TOKENS,
             },
         },
         timeout=TIMEOUT_SECONDS,
@@ -462,6 +486,15 @@ def _call_gemini(prompt: str, *, model: str, api_key: str, client: httpx.Client,
     candidates = body.get("candidates") or []
     if not candidates:
         raise LLMUnavailable(f"{model} returned no candidates")
+
+    # A truncated answer is the dangerous failure, because it looks like a
+    # success: valid HTTP, non-empty text, and JSON that dies on the last line.
+    # Cached once, it is a permanent silent fallback for that case in every run
+    # afterwards. So truncation is an error here, before anything can store it.
+    if candidates[0].get("finishReason") == "MAX_TOKENS":
+        raise LLMUnavailable(
+            f"{model} hit maxOutputTokens; the answer is truncated, not an answer"
+        )
 
     parts = candidates[0].get("content", {}).get("parts") or []
     text = "".join(p.get("text", "") for p in parts).strip()
@@ -630,28 +663,33 @@ class Thinker:
             return {"requested": 0, "cached_already": len(signals) - len(missing)}
 
         previous_pacer = self.pacer
-        interval = default_interval() if pace_seconds is None else pace_seconds
+        interval = default_interval(self.model) if pace_seconds is None else pace_seconds
         self.pacer = self.pacer or Pacer(interval)
 
         errors: list[str] = []
         done = 0
+        succeeded = 0
         lock = threading.Lock()
 
         def fetch(signal: Signal) -> None:
-            nonlocal done
+            nonlocal done, succeeded
+            ok = False
             try:
                 self.ask(signal)
+                ok = True
             except Exception as exc:            # noqa: BLE001 - reported, not raised
                 with lock:
-                    errors.append(f"{signal.case_id}: {type(exc).__name__}")
+                    errors.append(f"{signal.case_id}: {type(exc).__name__}: {str(exc)[:90]}")
             with lock:
                 done += 1
+                succeeded += int(ok)
                 if done % 10 == 0:
                     # Checkpoint. A batch that dies at case 280 should not throw
                     # away 279 paid-for answers.
                     self.cache.flush()
                     if progress:
-                        print(f"  thinker: {done}/{len(missing)} planned", flush=True)
+                        print(f"  thinker: {succeeded}/{done} of {len(missing)} planned "
+                              f"({done - succeeded} failed)", flush=True)
 
         try:
             with ThreadPoolExecutor(max_workers=workers) as pool:
