@@ -433,3 +433,174 @@ And the guard is the real lesson. I had already been burned once by an ablation 
 the rules against themselves. Fixing that instance was not enough; the *class* of error needed a
 check that fires on its own. The version of this that depends on me remembering is the version
 that publishes the bad number at 2am on submission day.
+
+## 2026-09-05 — The daily wall came back on submission day, and my retry loop still could not name it
+
+**Symptom:** Warming the cache for the final run. `warm_cache` counted down 142 → 48 → 39 → 38
+still to plan, and then stopped moving. The cache file went fourteen minutes without a write. The
+process was alive. The per-minute headers said `x-ratelimit-remaining-requests: 994` and a token
+bucket resetting in 577ms. Everything green, nothing happening.
+
+**Why:** The same daily token ceiling I wrote up on 25 August:
+
+```
+on tokens per day (TPD): Limit 200000, Used 199324, Requested 1514
+```
+
+Rounds one to three had spent the day's entire 200,000 tokens getting from 142 down to 38. Every
+call after that failed instantly and permanently, because the only thing that could clear it was
+the clock. My loop retried forty times against it.
+
+I already knew this limit existed. I had already been burned by it, already written the entry.
+What I fixed in August was the *arithmetic* — pace the calls, stop over-reserving with
+`max_tokens`. What I did not fix was the **reporting**, and that is the half that bit me again.
+
+Two things were hiding it. `warm_cache` caught the exception from each round and printed nothing
+about it, so "38 still to plan" for the fourth round running looked like slow progress rather
+than a wall. And worse, inside `prewarm` the progress counter incremented on both paths:
+
+```python
+try:
+    self.ask(signal)
+except Exception as exc:
+    errors.append(...)
+with lock:
+    done += 1                      # fires whether it worked or not
+```
+
+So a round where every single call failed still printed `290/300 planned`. I read that line twice
+across two different runs and both times concluded things were fine. It is the most confident lie
+the program tells.
+
+**Fix:** The counter now tracks successes separately and prints both, so the same round reads
+`0/10 of 38 planned (10 failed)` — which is unmistakable. `prewarm` already collected the reason
+each call failed and `warm_cache` was throwing it away; it now prints them.
+
+**What it taught me:** A retry is only correct if the thing you are waiting for can change inside
+your retry window. Mine could not, and nothing in the output could have told me that. **A retry
+loop that cannot say what it is retrying against is a spin loop with extra steps.** And a progress
+counter that increments on the failure path is not instrumentation, it is decoration — if a metric
+cannot go bad, it cannot tell you anything.
+
+The general version, which I keep relearning: fixing the instance is not fixing the class. In
+August I fixed the token arithmetic. What needed fixing was my ability to *see* the failure, and
+because I did not, the identical wall cost me two hours on the day of the deadline.
+
+---
+
+## 2026-09-05 — A thinking model spent my output budget thinking, and my cache stored the leftovers
+
+**Symptom:** Groq was out of tokens for the day, so I moved the planner to `gemini-3.6-flash` and
+started re-planning all 300 cases. It ran. No exceptions. Ten cases in I checked the cached
+answers instead of trusting the counter, and every one of them failed to parse:
+
+```
+gemini cases cached: 7 / 300
+JSONDecodeError: Unterminated string starting at: line 1 column 20
+parsed ok: 0  failed: 7
+output tokens -> max 583  median 583        (my cap was 600)
+```
+
+Every single answer truncated at almost exactly the same length.
+
+**Why:** Gemini 3.x reasons internally before it answers, and `maxOutputTokens` is **one budget
+shared between the thinking and the answer** — not a ceiling on the answer alone. The usage
+metadata says it plainly:
+
+```
+finishReason: MAX_TOKENS
+thoughtsTokenCount:   573
+candidatesTokenCount:  10
+```
+
+573 tokens of private reasoning, 27 left, 10 of them spent on JSON that stopped mid-string. This
+is the August `max_tokens` bug wearing a different provider's clothes. There the number was a
+reservation against a rate limit; here it is a budget the model can spend on something I never
+see. Both times I read it as "the most output I want", and both times it was not.
+
+`thinkingConfig.thinkingBudget = 0` would have been the clean answer. This model rejects it
+outright with a 400, so the only lever is headroom.
+
+**Fix:** `GEMINI_MAX_OUTPUT_TOKENS = 3000`, per provider rather than one shared constant — the
+opposite direction from the Groq fix, because Gemini bills what it produces rather than what you
+reserve, so unused headroom is free there and expensive on Groq. Observed thinking runs to about
+1,040 tokens and a plan is about 100, so that is roughly a 2x margin.
+
+The fix that actually matters is the second one. A reply that stops at `finishReason: MAX_TOKENS`
+now **raises**, on both providers, before anything can store it:
+
+```python
+if candidates[0].get("finishReason") == "MAX_TOKENS":
+    raise LLMUnavailable(f"{model} hit maxOutputTokens; the answer is truncated, not an answer")
+```
+
+I also had to go and delete the seven truncated answers that had already been written into
+`data/thinker_cache.json`.
+
+**What it taught me:** This is the worst-shaped failure I have hit on this project, and it is
+worse than the one in my form answer. A truncated reply is a **success** by every check I had:
+HTTP 200, non-empty text, a real model, tokens billed. It only dies at `json.loads`, which is
+downstream, inside the fallback path — where it quietly becomes a rules-only plan wearing the
+model's label. That is the ablation contamination bug again, arriving through a door I had not
+thought to lock.
+
+And because the cache is committed and keyed by prompt, a truncated answer stored once is a
+**permanent** silent fallback for that case, in that repo, in every run afterwards, for every
+reviewer who clones it. Reproducible, deterministic, and wrong.
+
+**A fallback nobody counts is a cover-up. A cached failure is worse — it is a wrong answer with a
+receipt.** The rule I am taking from it: validate a response against the thing that will
+eventually consume it, at the boundary where it enters the system, and never let a value into a
+cache that you have not proved you can read back.
+
+---
+
+## 2026-09-05 — Three planners in one evening, and none of them failed for a reason about quality
+
+**Symptom:** Between Groq running dry and the report card needing 300 planned cases, I went
+through four model names in about ninety minutes. Not one of them was rejected for reasoning
+badly.
+
+| planner | what stopped it |
+|---|---|
+| `openai/gpt-oss-120b` (Groq) | 262 of 300 planned, then 200,000 tokens/**day** exhausted |
+| `gemini-2.5-flash` | 404 — *"no longer available to new users"* |
+| `gemini-3.6-flash` | free tier allows **20 requests a day**. Cannot reach 300 |
+| `gemini-3.1-flash-lite-preview` | nothing. 300/300, zero failures |
+
+**Why, and the three separate lessons:**
+
+The `gemini-2.5-flash` 404 is my headline bug returning almost word for word: a model name I had
+written down as if it were a fixed part of the architecture, retired out from under me, failing
+with a status code my fallback path would happily have swallowed. Six months apart, same lesson.
+**A model name is a dependency with an expiry date, not a constant.**
+
+The 20-requests-a-day ceiling is the one I would never have predicted. I assumed a newer, better
+model meant a better option, and the newest model had the smallest free allowance by a factor of
+fifteen. **On a free tier, capability and availability are unrelated — the quota is the design
+constraint, not the benchmark.** The model that finished the job is the least capable of the four,
+and because it does not reason before answering it was also immune to the truncation trap above.
+Boring won.
+
+The one that embarrassed me most: for about ten minutes I believed my Groq key was dead, because
+a probe I wrote returned `HTTP 403, error code 1010`. That is a Cloudflare block on `urllib`'s
+default user-agent. The same key, same model, same request through `httpx` — which is what the
+application actually uses — returned 200 immediately. **I had tested with a different client than
+the one my program runs, and drawn a conclusion about my credentials from it.** I came close to
+regenerating a working key.
+
+**Fix:** `provider_for()` already dispatched on the model name, so switching providers was a
+one-constant change — the second provider was not redundancy theatre after all, it was the only
+reason this run happened at all. Pacing is now derived per provider, because Groq meters tokens
+per minute and Gemini meters requests per minute, and one shared constant idled at 13 seconds a
+call against a limit that was never the binding one.
+
+**What it taught me:** Every failure on the last day was an *availability* failure. I had spent
+thirteen days making the system robust to the model being **wrong** and almost none making it
+robust to the model being **gone**. What saved the submission was the design decision that looked
+most like over-engineering at the time: caching every answer to disk, keyed by model and prompt,
+and committing it. That cache is why 262 Groq answers survived three failed migration attempts
+intact, and why a reviewer with no API key and no quota reproduces every number in `RESULTS.md`
+exactly.
+
+**Build the part that still works when the vendor does not.**

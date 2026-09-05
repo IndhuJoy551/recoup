@@ -14,6 +14,15 @@ python -m pytest -q                        # should be green on camera later
 uvicorn app.main:app --port 8000           # leave running in a second terminal
 ```
 
+**Do not run `scripts.warm_cache`.** The planner cache is complete and committed -- all 300
+cases, zero fallbacks -- and both free-tier quotas are spent for the day. The report card reads
+the cache and makes no network calls, which is the whole point of committing it.
+
+Re-running the report card changes exactly one number in `results/RESULTS.md`: the audit ledger
+entry count, because the ledger is append-only and grows every run. Every rupee figure, the
+cohort fingerprint and the verdict are byte-identical. If a reviewer ever asks why that line
+moved, that is the answer, and it is a good one.
+
 Set the terminal font to at least 16pt. Check the browser is at 100% zoom and the dashboard
 is on the **Report card** tab before you start.
 
@@ -121,16 +130,29 @@ Talk over the output — do not read it aloud, land the four points:
 > of the difference is targeting and how much is compliance. Those are different claims and I
 > did not want to blur them."
 
-**Then the ablation. Read whatever it actually says.**
+**Then the ablation. The run is in, and it went against the model. Say it plainly.**
+
+*The fork in this section is resolved: 300 of 300 cases planned by one model, zero fell back,
+and the rules won. Do not soften it and do not rush past it -- this is the strongest forty
+seconds in the video.*
 
 > "Last thing, and this is the number I care most about: I ran the same pipeline with the model
 > switched off, and published both.
 >
-> [If the rules win] The rules win. On this cohort the model is decoration and the honest
-> recommendation is to ship the rules. I am showing you that because it is true.
+> **The rules win.** They caused two lakh four thousand. The agent caused one lakh
+> fifty-five thousand -- forty-nine thousand less, twenty-four percent worse.
 >
-> [If the model wins] The model causes ₹X more, with fewer messages and fewer opt-outs, for
-> under a rupee of inference across the whole batch."
+> And the model cost zero rupees for the batch. So it isn't that the AI was too expensive to
+> justify. It was free, and it still lost.
+>
+> On this cohort the language model is decoration, and the honest recommendation is to ship the
+> rules and keep the model for the cases the rules cannot express. I am showing you this because
+> it is true, and because a comparison that only gets published when it flatters the thing you
+> built is not a comparison."
+
+*If asked why you built the model layer at all: the rules-only policy exists to test that claim
+rather than assert it, and this is the test doing its job. You cannot know a model is decoration
+until you have built it and measured it against something honest.*
 
 ---
 
@@ -142,7 +164,8 @@ Say the weaknesses **before anyone asks**. This is the part that reads as maturi
 >
 > The world is synthetic and I wrote its rules. The defences are that the rules are published in
 > the repo, every policy sees identical inputs, and the ablation is allowed to go against me —
-> but it is not a live A/B test, and that is this project's biggest limitation.
+> which, as you just saw, is not hypothetical — but it is not a live A/B test, and that is
+> this project's biggest limitation.
 >
 > Two of the six actions have no live channel on this test account. `emi` is off, so instalments
 > are simulated, and messaging would need a provider. That is labelled in the code, the README
@@ -155,9 +178,12 @@ Say the weaknesses **before anyone asks**. This is the part that reads as maturi
 > real traffic. That turns the counterfactual from something I modelled into something measured,
 > and it is the single change that would improve every number you just saw.
 >
-> I am Sandeep, final year at RGUKT Nuzvid, and this is thirteen days of work. The bug log is in
-> the repo — including the one where my own error handling hid the fact that the AI was never
-> running at all."
+> I am Sandeep, final year at RGUKT Nuzvid, and this is thirteen days of work. Fourteen failures
+> are written up in the bug log — including the one where my own error handling hid the fact
+> that the AI was never running at all, and the one from today where a model returned an answer
+> cut off mid-sentence, my code cached it, and it would have become a permanent wrong answer
+> that reproduced perfectly for anyone who cloned the repo. I caught that one before it
+> shipped. That is what writing the failures down as they happen actually buys you."
 
 ---
 
