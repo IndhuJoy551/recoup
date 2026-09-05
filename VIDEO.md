@@ -28,9 +28,23 @@ is on the **Report card** tab before you start.
 
 ---
 
-## 0:00 – 0:30 — the problem, with a number
+## 0:00 – 0:40 — the problem, then what this is
 
-*On screen: the dashboard's four cohort cards.*
+*On screen: a title card for the first 3 seconds, then the dashboard's four cohort cards.*
+
+**Title card text** (static, 3 seconds, no narration over it -- this is the one slide in the
+video and it is allowed because it is a title, not an explanation):
+
+```
+Recoup
+AI Revenue Recovery  ·  Razorpay AI Buildathon 2026
+Sandeep Togarathi  ·  RGUKT Nuzvid
+```
+
+Then cut straight to the dashboard and start talking. **Lead with the number, not with your
+name** -- the reviewer is deciding in the first fifteen seconds whether to keep watching, and a
+number does that work where an introduction does not. The framing comes immediately after, once
+they care.
 
 > "This merchant has five lakh forty-nine thousand rupees at risk across one month — failed
 > payments, failed subscription mandates, abandoned checkouts, overdue invoices.
@@ -41,11 +55,19 @@ is on the **Report card** tab before you start.
 >
 > That number is what this project is actually about."
 
-*Do not rush this. It is the whole pitch.*
+*Beat. Then frame it, now that they want to know.*
+
+> "This is **Recoup**, my submission for the **AI Revenue Recovery** track. It finds a merchant's
+> at-risk revenue, decides what to do about each case, and carries it out through Razorpay's API
+> behind a guardrail that is allowed to stop it — on a real account, in test mode.
+>
+> And the number it is built around is the one on screen: **money caused, not money collected.**"
+
+*Do not rush any of this. It is the whole pitch.*
 
 ---
 
-## 0:30 – 1:15 — the shape, once
+## 0:40 – 1:15 — the shape, once
 
 *On screen: the diagram from ARCHITECTURE.md.*
 
