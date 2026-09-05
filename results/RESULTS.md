@@ -6,8 +6,8 @@ reproducible: same seed, same cohort fingerprint, same committed model cache.
 - cohort seed: `20260826`
 - cohort fingerprint: `0d07e645a56905b580667ed083ad6833d6e079ca0dec3806a39e7cc8706f17a0`
 - as-of: `2026-08-31T04:00:00+00:00`
-- planner: `openai/gpt-oss-120b` (cache only)
-- audit ledger: 1922 entries, chain intact
+- planner: `gemini-3.1-flash-lite-preview` (cache only)
+- audit ledger: 3728 entries, chain intact
 
 ## The comparison
 
@@ -18,7 +18,7 @@ reproducible: same seed, same cohort fingerprint, same committed model cache.
 | `blast_everyone_gated` | **Rs 74,926** | 18.6% | Rs 211,705 | 268 | 0 | 16 | 14 | 25 | 0 |
 | `retry_everything` | **Rs 20,103** | 5.0% | Rs 158,594 | 0 | 853 | 0 | 0 | 0 | 180 |
 | `rules_only` | **Rs 204,026** | 50.6% | Rs 332,080 | 279 | 66 | 31 | 15 | 31 | 0 |
-| `recoup` | **Rs 166,325** | 41.3% | Rs 298,313 | 306 | 87 | 26 | 12 | 35 | 0 |
+| `recoup` | **Rs 155,025** | 38.5% | Rs 286,503 | 266 | 67 | 28 | 11 | 43 | 0 |
 
 Cohort: 300 cases, Rs 548,910 at risk. Of that, Rs 402,954 is winnable, Rs 138,491 was arriving anyway, and Rs 7,465 cannot be recovered by anyone.
 
@@ -73,19 +73,19 @@ ABLATION: does the model earn its place?
 
                                       AI on (recoup)  AI off (rules)
   ------------------------------------------------------------------
-  money caused                            Rs 166,325      Rs 204,026
-  share of winnable money                      41.3%           50.6%
-  messages sent                                  306             279
-  messages per Rs 1000 caused                   1.84            1.37
-  customers lost to opt-out                       12              15
-  chased someone already paying                   35              31
-  handed to a human                               26              31
-  cost as % of money caused                    2.03%           1.94%
+  money caused                            Rs 155,025      Rs 204,026
+  share of winnable money                      38.5%           50.6%
+  messages sent                                  266             279
+  messages per Rs 1000 caused                   1.72            1.37
+  customers lost to opt-out                       11              15
+  chased someone already paying                   43              31
+  handed to a human                               28              31
+  cost as % of money caused                    2.31%           1.94%
 
-  NO VERDICT. 142 of 300 cases (47%) fell back to the rules because the
-  planner was unreachable, so the 'AI on' column above is partly the 'AI off' column
-  with a different label. Publishing a winner from this would be publishing a number
-  I know to be contaminated.
+  model cost for the batch      Rs 0   (0 live calls, 300 from cache, 0 fell back to rules)
+  model cost as % of recovery   0.000%
 
-  Fix: `python -m scripts.warm_cache` until it reports the cache complete, then re-run.
+  VERDICT: the rules win. The model caused Rs 49,001 LESS (-24.0%).
+           On this cohort the LLM is decoration, and the honest recommendation
+           is to ship the rules and keep the model for the cases they cannot express.
 ```

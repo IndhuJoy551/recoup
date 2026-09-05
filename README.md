@@ -270,13 +270,17 @@ that changed the design:
 
 ## The planner
 
-`openai/gpt-oss-120b` by default, reached through an OpenAI-compatible endpoint;
-`provider_for()` also dispatches Gemini model names to Google's API. Two providers because
-one of them ran out of free-tier quota partway through building this and throttled a 300-case
-batch to roughly a call a minute.
+`gemini-3.1-flash-lite-preview` by default, reached through Google's API; `provider_for()`
+also dispatches OpenAI-compatible model names to Groq. Two providers, and on the final day
+both of them mattered: Groq planned 262 of the 300 cases and then hit a 200,000
+token-per-**day** ceiling, and the obvious replacement, `gemini-3.6-flash`, allows 20 requests
+a day on the free tier. The published cohort is planned by the one model that could serve all
+300 in a single run, because a column stitched together from two planners is not an ablation.
 
-Calls are paced client-side to the provider's token budget rather than discovering the limit by
-hitting it, and every answer is cached to `data/thinker_cache.json`, keyed by
+Calls are paced client-side to whichever budget the provider actually meters -- tokens per
+minute on Groq, requests per minute on Gemini -- rather than discovering the limit by hitting
+it. A reply that stops at `finishReason: MAX_TOKENS` is treated as a failure rather than an
+answer, so a truncated plan can never reach the cache. Every answer is cached to `data/thinker_cache.json`, keyed by
 `(model, system prompt, case)` and committed — which is why a clone with no API key reproduces
 the numbers.
 

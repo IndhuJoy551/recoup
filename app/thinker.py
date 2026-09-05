@@ -75,7 +75,21 @@ CACHE_PATH = PROJECT_ROOT / "data" / "thinker_cache.json"
 # per case is the wrong tool however well it reasons. This one answers in ~2s and
 # still gets the error_source and salary-day judgements right, which the report
 # card checks rather than assumes.
-DEFAULT_MODEL = "openai/gpt-oss-120b"
+# Three planners were tried for the published cohort, and the constraint that
+# decided it was quota, not quality:
+#   openai/gpt-oss-120b  Groq. Planned 262 of 300, then hit a 200,000 token-per-DAY
+#                        ceiling. Its per-minute headers stayed green throughout, so
+#                        the warm-up read as slow rather than walled.
+#   gemini-3.6-flash     20 requests a day on the free tier. Does not reach 300.
+#                        It is also a thinking model, and `maxOutputTokens` is one
+#                        budget shared by thinking and answer -- see BUGLOG.
+#   gemini-3.1-flash-lite-preview  Sustained 25/25 with no failures and does not
+#                        think before answering, so no truncation trap. This one.
+# A mixed-provider column is not an ablation, so the published cohort is planned
+# end to end by one model.
+# The cache is committed either way, so a reviewer reproduces the published numbers
+# with no key and no quota at all.
+DEFAULT_MODEL = "gemini-3.1-flash-lite-preview"
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
@@ -104,6 +118,7 @@ USD_PER_M: dict[str, tuple[float, float]] = {          # model -> (input, output
     "openai/gpt-oss-20b": (0.10, 0.50),
     "gemini-3.5-flash-lite": (0.10, 0.40),
     "gemini-3.6-flash": (0.30, 2.50),
+    "gemini-3.1-flash-lite-preview": (0.10, 0.40),
 }
 FALLBACK_USD_PER_M = (0.30, 2.50)                       # assume the expensive tier
 
