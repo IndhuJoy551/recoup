@@ -69,7 +69,15 @@ they care.
 
 ## 0:40 – 1:15 — the shape, once
 
-*On screen: the diagram from ARCHITECTURE.md.*
+*Terminal — same window, no switching. Run:*
+
+```bash
+python -m scripts.diagram
+```
+
+*It prints the pipeline diagram straight out of ARCHITECTURE.md, so there is one copy and it
+cannot drift. Staying in the terminal here avoids a window switch in the tightest part of the
+script; the browser is not needed again until 3:00.*
 
 > "Five parts. The **Watcher** turns a case into plain facts — no AI, deliberately. The
 > **Thinker** is the one language model in the project; it proposes a plan and it can do nothing
