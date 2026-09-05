@@ -73,7 +73,7 @@ they care.
 
 > "Five parts. The **Watcher** turns a case into plain facts — no AI, deliberately. The
 > **Thinker** is the one language model in the project; it proposes a plan and it can do nothing
-> else. The **Guard** is nine named rules that decide whether each proposed action is allowed —
+> else. The **Guard** is ten named rules that decide whether each proposed action is allowed —
 > the model cannot see it, argue with it, or change it. The **Doer** can perform exactly six
 > actions. The **Ledger** records all of it, append-only.
 >
@@ -97,7 +97,7 @@ Let it print stage by stage. Talk over it:
 > "Watcher: a failed payment, eighteen hundred rupees, `error_source: customer`, reason
 > `payment_cancelled`. Fourteen previous purchases — that is a good customer.
 >
-> Thinker: it proposes a payment link tomorrow morning, and one follow-up on day four. Read the
+> Thinker: it proposes a gentle reminder tomorrow at ten, and a payment link the day after. Read the
 > reason it wrote — that string goes into the audit trail.
 >
 > Guard: both allowed, all rules passed.
