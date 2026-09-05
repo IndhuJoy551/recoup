@@ -300,4 +300,4 @@ results/     report_card.json  RESULTS.md
 data/        thinker_cache.json (committed)  recoup.db (not)
 ```
 
-Built by Sandeep Togarathi · RGUKT Nuzvid, 2027.
+Built by Sodadasi Indhu Joy · RGUKT Nuzvid, 2027.

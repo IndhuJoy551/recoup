@@ -38,7 +38,7 @@ video and it is allowed because it is a title, not an explanation):
 ```
 Recoup
 AI Revenue Recovery  ·  Razorpay AI Buildathon 2026
-Sandeep Togarathi  ·  RGUKT Nuzvid
+Sodadasi Indhu Joy  ·  RGUKT Nuzvid
 ```
 
 Then cut straight to the dashboard and start talking. **Lead with the number, not with your
@@ -208,7 +208,7 @@ Say the weaknesses **before anyone asks**. This is the part that reads as maturi
 > real traffic. That turns the counterfactual from something I modelled into something measured,
 > and it is the single change that would improve every number you just saw.
 >
-> I am Sandeep, final year at RGUKT Nuzvid, and this is thirteen days of work. Fourteen failures
+> I am Indhu Joy, final year at RGUKT Nuzvid, and this is thirteen days of work. Fourteen failures
 > are written up in the bug log — including the one where my own error handling hid the fact
 > that the AI was never running at all, and the one from today where a model returned an answer
 > cut off mid-sentence, my code cached it, and it would have become a permanent wrong answer
