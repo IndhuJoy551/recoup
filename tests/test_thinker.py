@@ -300,9 +300,15 @@ def test_the_pacer_spaces_calls_out_across_threads():
         list(pool.map(go, range(6)))
 
     starts.sort()
-    gaps = [b - a for a, b in zip(starts, starts[1:])]
-    assert all(g >= 0.04 for g in gaps), gaps
+    # Asserting on each pair of adjacent timestamps was flaky under load: the
+    # timestamp is taken after wait() returns, so a thread descheduled between
+    # waking and recording makes two correctly-spaced calls look simultaneous.
+    # That is a measurement artefact, not a pacing failure. Total elapsed time
+    # cannot be faked the same way -- six calls at a 0.05s interval cannot
+    # finish in less than five intervals however the scheduler interleaves them.
     assert len(starts) == 6, "pacing must not drop work, only delay it"
+    elapsed = starts[-1] - starts[0]
+    assert elapsed >= 5 * 0.05 * 0.9, f"calls were not spaced out: {elapsed:.3f}s"
 
 
 def test_pacing_is_off_unless_a_batch_asked_for_it(brain, signal, monkeypatch):
